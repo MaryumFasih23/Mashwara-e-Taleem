@@ -1,0 +1,177 @@
+/* ============================
+   UNIVERSITIES PAGE — Figma Match
+   ============================ */
+
+:root {
+  --mint-bg: #b7d8c8;
+  --peach-box: #e3c4b8;
+  --teal-box: #a7cbbd;
+  --deep-red: #b73939;
+  --deep-green: #246b3c;
+  --coral-title: #c9543a;
+  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-soft: 0 3px 8px rgba(0, 0, 0, 0.18);
+  --radius-card: 18px;
+  --radius-inner: 12px;
+  --font-ui: "Poppins", system-ui, sans-serif;
+}
+
+.uni-container {
+  width: 100%;
+  font-family: var(--font-ui);
+}
+
+/* =============================
+   PAGE TITLE
+   ============================= */
+
+.uni-title {
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--coral-title);
+  margin-bottom: 25px;
+}
+
+/* =============================
+   MAIN LAYOUT
+   ============================= */
+
+.uni-top {
+  display: flex;
+  gap: 26px;
+}
+
+/* =============================
+   FILTER PANEL (Left column)
+   ============================= */
+
+.uni-filters {
+  width: 260px;
+  background: var(--peach-box);
+  padding: 22px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-heavy);
+}
+
+.uni-filters h3 {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.uni-search {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  background: white;
+  border-radius: var(--radius-inner);
+  border: none;
+  margin-bottom: 16px;
+}
+
+.uni-label {
+  font-weight: 600;
+  margin-top: 14px;
+  display: block;
+}
+
+.uni-checks label {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.uni-select {
+  width: 100%;
+  padding: 9px;
+  font-size: 14px;
+  border-radius: var(--radius-inner);
+  background: white;
+  border: none;
+  margin-top: 6px;
+}
+
+.uni-reset {
+  margin-top: 22px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-inner);
+  background: #d29f8e;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.uni-reset:hover {
+  opacity: 0.9;
+}
+
+/* =============================
+   UNIVERSITY LIST (Right column)
+   ============================= */
+
+.uni-list {
+  flex: 1;
+}
+
+/* Sort row */
+.uni-sort {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  font-weight: 600;
+}
+
+.uni-sort-select {
+  padding: 7px 12px;
+  border-radius: var(--radius-inner);
+  font-size: 14px;
+}
+
+/* =============================
+   UNIVERSITY CARD (Main item)
+   ============================= */
+
+.uni-card {
+  background: var(--teal-box);
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-heavy);
+}
+
+.uni-card-img {
+  width: 140px;
+  height: 100px;
+  border-radius: var(--radius-inner);
+  object-fit: cover;
+  box-shadow: var(--shadow-soft);
+}
+
+.uni-card-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.uni-card-title {
+  font-size: 20px;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.red {
+  color: var(--deep-red);
+  font-weight: 700;
+}
+
+.green {
+  color: var(--deep-green);
+  font-weight: 700;
+}

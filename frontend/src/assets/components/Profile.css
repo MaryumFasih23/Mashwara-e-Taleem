@@ -1,0 +1,211 @@
+/* ===============================
+   PROFILE PAGE — Exact Figma Match
+   =============================== */
+
+:root {
+  --mint-bg: #b7d8c8;
+  --peach-box: #e3c4b8;
+  --teal-box: #c7e2d3;
+  --coral-title: #c9543a;
+
+  --deep-green: #587f70;
+  --tag-green: #8db39a;
+  --upload-green: #7fae8b;
+
+  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-soft: 0 3px 8px rgba(0, 0, 0, 0.18);
+
+  --radius-card: 18px;
+  --radius-inner: 12px;
+
+  --font-ui: "Poppins", system-ui, sans-serif;
+}
+
+.profile-container {
+  width: 100%;
+  font-family: var(--font-ui);
+}
+
+/* =============================
+   PAGE TITLE
+   ============================= */
+
+.profile-title {
+  text-align: center;
+  font-size: 34px;
+  color: var(--coral-title);
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* =============================
+   PROFILE HEADER CARD
+   ============================= */
+
+.profile-header-card {
+  width: 80%;
+  margin: 0 auto 25px auto;
+  padding: 22px;
+  background: var(--peach-box);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-heavy);
+
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.profile-user-icon {
+  font-size: 62px;
+}
+
+.profile-header-card h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile-save-btn {
+  margin-left: auto;
+  padding: 10px 20px;
+  border-radius: var(--radius-inner);
+  background: #d28f85;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.profile-save-btn:hover {
+  opacity: 0.9;
+}
+
+/* =============================
+   TAB BUTTON BAR
+   ============================= */
+
+.profile-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  background: #d6e8dd;
+  padding: 10px 20px;
+  border-radius: var(--radius-inner);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  color: #3a4a45;
+  transition: 0.2s;
+}
+
+.tab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.tab-btn.active {
+  background: var(--deep-green);
+  color: white;
+  box-shadow: var(--shadow-heavy);
+}
+
+/* =============================
+   MAIN CONTENT CARD
+   ============================= */
+
+.profile-content-card {
+  width: 85%;
+  margin: 0 auto 40px auto;
+  padding: 25px;
+  background: var(--teal-box);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-heavy);
+}
+
+.section-title {
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sub-section-title {
+  margin: 18px 0 12px;
+  font-weight: 700;
+}
+
+/* =============================
+   FORM ROWS
+   ============================= */
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px;
+  border-radius: var(--radius-inner);
+  border: none;
+  background: white;
+  font-size: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+/* =============================
+   TAGS (Countries, preferred intakes, etc.)
+   ============================= */
+
+.tag-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  background: var(--tag-green);
+  padding: 6px 14px;
+  border-radius: var(--radius-inner);
+  color: white;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Upload tag (Resume, PS, Transcript) */
+.upload-tag {
+  background: var(--upload-green);
+  padding: 8px 18px;
+  border-radius: var(--radius-inner);
+  color: white;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+}
+
+/* =============================
+   CHECKBOX AREAS
+   ============================= */
+
+.checks label {
+  margin-bottom: 8px;
+  font-size: 14px;
+  display: block;
+}

@@ -1,0 +1,109 @@
+.da-container {
+  width: 100%;
+}
+
+.da-title {
+  text-align: center;
+  font-size: 34px;
+  color: #b55239;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.da-subtitle {
+  text-align: center;
+  color: #444;
+  margin-bottom: 30px;
+}
+
+/* TABS */
+.da-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.da-tab {
+  padding: 10px 20px;
+  border-radius: 20px;
+  background: #c7e2d3;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.da-tab.active {
+  background: #5f8677;
+  color: white;
+}
+
+/* MAIN AREA */
+.da-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+/* LEFT: UPLOAD BOX */
+.da-upload-box {
+  width: 48%;
+  background: #c7e2d3;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.da-upload-area {
+  border: 2px dashed #5a7f70;
+  padding: 50px 20px;
+  border-radius: 15px;
+  text-align: center;
+}
+
+.da-upload-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.da-browse {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  background: #e3c4b8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* RIGHT: RESULTS */
+.da-results {
+  width: 48%;
+  background: #c7e2d3;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.da-result-title {
+  margin: 10px 0 5px;
+  font-weight: 700;
+}
+
+.da-score-box {
+  width: 100%;
+  height: 40px;
+  border-radius: 15px;
+  background: white;
+  text-align: center;
+  line-height: 40px;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.da-feedback-box {
+  background: white;
+  border-radius: 15px;
+  padding: 15px;
+  height: 200px;
+}

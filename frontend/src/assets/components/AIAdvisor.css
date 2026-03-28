@@ -1,0 +1,102 @@
+.ai-container {
+  width: 100%;
+}
+
+.ai-title {
+  text-align: center;
+  font-size: 34px;
+  color: #b55239;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+/* INTRO BOX */
+.ai-intro-box {
+  background: #e3c4b8;
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  border-radius: 15px;
+  width: 80%;
+  margin: 0 auto 30px auto;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.ai-avatar {
+  font-size: 26px;
+}
+
+.ai-intro-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* QUICK QUESTIONS */
+.ai-quick-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.ai-quick-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.ai-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+}
+
+.ai-quick-btn {
+  background: #89a89a;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 22px;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  transition: 0.2s;
+}
+
+.ai-quick-btn:hover {
+  transform: translateY(-3px);
+}
+
+/* INPUT BOX */
+.ai-input-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 80%;
+  margin: 0 auto;
+}
+
+.ai-input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  border: none;
+  background: #e1f0e7;
+  font-size: 16px;
+}
+
+.ai-send-btn {
+  background: #5a7f70;
+  border: none;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.ai-disclaimer {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 13px;
+  color: #555;
+}

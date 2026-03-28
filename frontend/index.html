@@ -1,0 +1,44 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mashwar-e-Taleem</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merienda:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+      :root{
+        --teal-800:#0E5A59;
+        --teal-700:#0f6462;
+        --text-on-teal:#ffffff;
+        --cta:#6F9A85;
+        --cta-hover:#7BA892;
+        --edge:#CFE3DE;
+        --logo-bg:#CDEAE5;
+      }
+      html,body,#root{height:100%}
+      body{
+        margin:0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color:#1a1f1e;
+        background:#e9f3ef; /* page bg */
+      }
+      /* Util container */
+      .container{
+        max-width:1200px;
+        margin-inline:auto;
+        padding-inline:24px;
+      }
+      /* For smooth focus visibility */
+      :focus-visible{outline:3px solid #e4ffee; outline-offset:2px;}
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
