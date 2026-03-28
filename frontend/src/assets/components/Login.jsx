@@ -4,6 +4,8 @@ import "./Login.css";
 import loginImage from "../login-image.png";
 import { loginWithEmail, loginWithGoogle } from "../../firebaseAuth";
 import logo from "../logo.png";
+import { createUserProfile } from "../../api/userapi";
+
 export default function Login() {
 const navigate = useNavigate();
 
@@ -119,6 +121,16 @@ async function onSubmit(e) {
   try {
     const result = await loginWithGoogle();
     console.log("Google login success:", result.user);
+    // Create user in MongoDB if they don't exist yet
+    try {
+      await createUserProfile({
+        uid: result.user.uid,
+        name: result.user.displayName || "User",
+        email: result.user.email,
+      });
+    } catch (err) {
+      // Ignore "already exists" error - user already in DB
+    }
     alert("Logged in with Google!");
     navigate("/dashboard");
   } catch (error) {
@@ -138,7 +150,7 @@ async function onSubmit(e) {
           </button>
 
           <p className="lp-hint">
-            Don’t have an Account? <a href="/signup">Sign Up</a>
+            Don't have an Account? <a href="/signup">Sign Up</a>
           </p>
         </section>
         <section className="lp-art">

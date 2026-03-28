@@ -56,4 +56,31 @@ router.post("/create", async (req, res) => {
   }
 });
 
+// GET profile by Firebase UID
+router.get("/profile/:uid", async (req, res) => {
+  try {
+    const user = await User.findOne({ uid: req.params.uid });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// PUT update profile by Firebase UID (upsert - creates if not exists)
+router.put("/profile/:uid", async (req, res) => {
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { uid: req.params.uid },
+      { $set: req.body },
+      { new: true, upsert: true, runValidators: false }
+    );
+    return res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

@@ -209,3 +209,70 @@
   font-size: 14px;
   display: block;
 }
+
+/* =============================
+   TEXTAREA (Extracurriculars, Career Goals)
+   ============================= */
+
+.profile-textarea {
+  padding: 12px;
+  border-radius: var(--radius-inner);
+  border: none;
+  background: white;
+  font-size: 14px;
+  box-shadow: var(--shadow-soft);
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  font-family: var(--font-ui);
+  box-sizing: border-box;
+}
+
+/* =============================
+   DOCUMENT UPLOAD
+   ============================= */
+
+.doc-upload-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.doc-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.doc-upload-item span {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 180px;
+}
+
+.doc-upload-btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-inner);
+  background: var(--upload-green);
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: 0.2s;
+}
+
+.doc-upload-btn:hover {
+  opacity: 0.85;
+}
+
+.doc-status {
+  font-size: 13px;
+  color: var(--deep-green);
+  font-weight: 600;
+}
+
+.doc-status.uploaded {
+  color: #3a7d55;
+}

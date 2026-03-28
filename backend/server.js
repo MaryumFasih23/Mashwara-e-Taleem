@@ -11,9 +11,6 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
 
-  import userRoutes from "./routes/userRoutes.js";
-  
-  app.use("/api/users", userRoutes);
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
@@ -21,4 +18,3 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export default app;
-    
