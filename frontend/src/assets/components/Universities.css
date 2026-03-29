@@ -175,3 +175,89 @@
   color: var(--deep-green);
   font-weight: 700;
 }
+
+.uni-note,
+.uni-error,
+.uni-empty {
+  padding: 12px 14px;
+  border-radius: var(--radius-inner);
+  margin-bottom: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.uni-error {
+  border-left: 4px solid var(--deep-red);
+}
+
+.uni-note {
+  border-left: 4px solid #396f62;
+}
+
+.uni-link {
+  color: #0f4a8a;
+  font-weight: 600;
+}
+
+.uni-pagination {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.uni-page-btn {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.uni-page-btn:hover:not(:disabled):not(.active) {
+  background: #f0f7f5;
+  border-color: #2f6e60;
+  color: #2f6e60;
+}
+
+.uni-page-btn.active {
+  background: #2f6e60;
+  color: #ffffff;
+  border-color: #2f6e60;
+  box-shadow: 0 2px 8px rgba(47, 110, 96, 0.3);
+}
+
+.uni-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.uni-page-nav {
+  min-width: auto;
+  padding: 8px 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.uni-page-ellipsis {
+  padding: 4px 6px;
+  color: #999;
+  font-size: 1.1rem;
+  user-select: none;
+}
+
+.uni-page-info {
+  margin-left: 12px;
+  font-size: 0.85rem;
+  color: #888;
+  white-space: nowrap;
+}
