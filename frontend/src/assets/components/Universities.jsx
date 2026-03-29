@@ -36,8 +36,8 @@ export default function Universities() {
     setLoading(true);
     setError("");
 
-    // Default behavior: fetch full ranking across all eligibility ranges.
-    getUniversityRecommendations(user.uid, { minProb: 0, topK: 5000 })
+    // Always request recommendations with a minimum 10% eligibility floor.
+    getUniversityRecommendations(user.uid, { minProb: 0.1, topK: 5000 })
       .then((data) => {
         if (!active) return;
         setResults(data.results || []);
@@ -61,6 +61,9 @@ export default function Universities() {
   const filteredResults = useMemo(() => {
     let list = [...results];
 
+    // Hard floor: do not list universities below 10% eligibility.
+    list = list.filter((item) => Number(item.eligibility_probability) >= 0.1);
+
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((item) => item.university?.toLowerCase().includes(q));
@@ -75,9 +78,15 @@ export default function Universities() {
     }
 
     if (sortBy === "lowestTuition") {
-      list.sort((a, b) => Number(a.tuition_usd || 0) - Number(b.tuition_usd || 0));
+      // Primary: lowest tuition. Secondary: highest eligibility within same tuition tier.
+      list.sort((a, b) => {
+        const tuitionDiff = Number(a.tuition_usd || 0) - Number(b.tuition_usd || 0);
+        if (tuitionDiff !== 0) return tuitionDiff;
+        return Number(b.eligibility_probability || 0) - Number(a.eligibility_probability || 0);
+      });
     } else {
-      list.sort((a, b) => Number(b.eligibility_probability || 0) - Number(a.eligibility_probability || 0));
+      // bestMatch: final_score = 0.4 * eligibility + 0.6 * QS prestige
+      list.sort((a, b) => Number(b.final_score || 0) - Number(a.final_score || 0));
     }
 
     return list;
@@ -174,13 +183,16 @@ export default function Universities() {
               <div className="uni-card" key={`${uni.university}-${uni.url || "no-url"}`}>
                 <div className="uni-card-info">
                   <h2 className="uni-card-title">{uni.university}</h2>
+                  {Number(uni.qs_rank) < 1000 && (
+                    <p className="uni-qs-badge">QS Rank: <span className="qs-num">#{uni.qs_rank}</span></p>
+                  )}
                   <p>Tuition/Year: <span className="red">{formatCurrency(Number(uni.tuition_usd))}</span></p>
                   <p>Min GPA: <span className="red">{Number(uni.min_gpa || 0).toFixed(2)}</span></p>
                   <p>Min SAT: <span className="red">{Math.round(Number(uni.min_sat || 0))}</span></p>
                   <p>Min TOEFL: <span className="red">{Math.round(Number(uni.min_toefl || 0))}</span></p>
                   <p>Min IELTS: <span className="red">{Number(uni.min_ielts || 0).toFixed(1)}</span></p>
                   <p>
-                    Your Match: <span className="green">{formatPercent(Number(uni.eligibility_probability || 0))}</span>
+                    Eligibility: <span className="green">{formatPercent(Number(uni.eligibility_probability || 0))}</span>
                   </p>
                   {uni.url && (
                     <p>

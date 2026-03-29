@@ -199,6 +199,17 @@
   font-weight: 600;
 }
 
+.uni-qs-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 2px 0 6px;
+}
+
+.uni-qs-badge .qs-num {
+  color: #1a5276;
+  font-weight: 700;
+}
+
 .uni-pagination {
   margin-top: 20px;
   margin-bottom: 20px;

@@ -146,6 +146,7 @@ router.get("/recommendations/:uid", async (req, res) => {
     const minProb = Number.isFinite(minProbRaw)
       ? Math.min(Math.max(minProbRaw, 0), 1)
       : 0.1;
+    const effectiveMinProb = Math.max(minProb, 0.1);
     const topK = Number.isFinite(topKRaw)
       ? Math.min(Math.max(Math.trunc(topKRaw), 1), 10000)
       : 5000;
@@ -156,18 +157,23 @@ router.get("/recommendations/:uid", async (req, res) => {
     }
 
     const { input, warnings } = buildModelInput(user);
-    const inferencePayload = { ...input, min_prob: minProb, top_k: topK };
+    const inferencePayload = { ...input, min_prob: effectiveMinProb, top_k: topK };
 
     let modelResult = await runInference(inferencePayload);
     let fallbackApplied = false;
 
-    // If strict threshold returns no rows, retry with relaxed threshold so
-    // the UI can still show ranked suggestions.
+    // If strict threshold returns no rows, retry with baseline 10% threshold.
     if (!Array.isArray(modelResult?.top_results) || modelResult.top_results.length === 0) {
-      modelResult = await runInference({ ...input, min_prob: 0, top_k: topK });
+      modelResult = await runInference({ ...input, min_prob: 0.1, top_k: topK });
       fallbackApplied = true;
-      warnings.push("No universities matched your current threshold. Showing best available suggestions.");
+      warnings.push("No universities matched your current threshold. Showing results with at least 10% eligibility.");
     }
+
+    const filteredResults = Array.isArray(modelResult?.top_results)
+      ? modelResult.top_results
+          .filter((item) => Number(item?.eligibility_probability) >= 0.1)
+          .slice(0, topK)
+      : [];
 
     return res.status(200).json({
       message: "University recommendations generated",
@@ -175,8 +181,8 @@ router.get("/recommendations/:uid", async (req, res) => {
       inputUsed: input,
       warnings,
       fallbackApplied,
-      totalUniversities: modelResult.total_universities ?? 0,
-      results: modelResult.top_results ?? [],
+      totalUniversities: filteredResults.length,
+      results: filteredResults,
     });
   } catch (error) {
     const detail = String(error?.message || "");
