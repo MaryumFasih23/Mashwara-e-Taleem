@@ -1,0 +1,217 @@
+university_name,country,qs_rank,min_ielts,ielts_band,toefl,duolingo,gre,work_exp,source,min_cgpa,gre_score,tuition_usd
+Imperial College London,UK,2,6.5,7.0,100,120,1,0,groq,3.7,320,42000
+University of Oxford,UK,4,7.0,7.0,110,125,1,0,groq,3.7,325,40000
+University of Cambridge,UK,6,7.0,7.0,110,125,1,1,groq,3.7,325,40000
+UCL (University College London),UK,9,6.5,7.0,96,120,1,0,groq,3.6,315,36000
+The University of Melbourne,Australia,19,6.5,7.0,79,105,1,0,groq,3.5,308,35000
+The University of New South Wales,Australia,20,6.5,7.0,90,115,1,0,groq,3.4,305,33000
+Technical University of Munich,Germany,22,6.5,7.0,88,115,0,0,groq,3.3,0,700
+The University of Sydney,Australia,25,6.5,7.0,85,110,1,0,groq,3.3,305,34000
+McGill University,Canada,27,6.5,7.0,90,120,1,0,groq,3.3,315,20000
+University of Toronto,Canada,29,6.5,7.0,93,120,1,0,groq,3.3,318,22000
+King's College London (KCL),UK,31,7.0,7.0,100,120,1,0,groq,3.5,310,32000
+Australian National University,Australia,32,6.5,7.0,80,110,1,0,groq,3.4,308,30000
+University of Edinburgh,UK,34,6.5,7.0,92,115,1,0,groq,3.4,308,29000
+The University of Manchester,UK,35,6.5,7.0,90,115,1,0,groq,3.3,305,28000
+Monash University,Australia,36,6.5,7.0,79,105,1,0,groq,3.3,303,31000
+University of British Columbia,Canada,40,6.5,7.0,90,120,1,0,groq,3.3,312,20000
+The University of Queensland,Australia,42,6.5,7.0,87,110,1,0,groq,3.3,302,30000
+University of Bristol,UK,51,6.5,7.0,90,115,0,0,groq,3.3,0,27000
+London School of Economics and Political Science (LSE),UK,56,7.0,7.5,107,125,1,0,groq,3.5,315,35000
+Ludwig-Maximilians-Universität München,Germany,58,6.0,7.0,85,105,0,0,groq,3.2,0,700
+The University of Warwick,UK,74,6.5,7.0,90,115,1,0,groq,3.3,308,30000
+University of Birmingham,UK,76,6.5,7.0,88,115,0,0,groq,3.2,0,26000
+The University of Western Australia,Australia,77,6.5,7.0,80,105,0,0,groq,3.2,0,27000
+University of Glasgow,UK,79,6.5,7.0,90,115,0,0,groq,3.2,0,24000
+Ruprecht-Karls-Universität Heidelberg,Germany,80,6.5,7.0,80,110,0,0,groq,3.3,0,700
+Adelaide University,Australia,82,6.5,7.0,79,105,1,0,groq,3.2,300,27000
+University of Leeds,UK,86,6.5,7.0,88,115,0,0,groq,3.2,0,24000
+University of Southampton,UK,87,6.5,7.0,88,115,0,0,groq,3.2,0,25000
+Freie Universität Berlin,Germany,88,6.5,7.0,88,105,0,0,groq,3.0,0,700
+The University of Sheffield,UK,92,6.5,7.0,88,115,0,0,groq,3.2,0,24000
+Durham University,UK,94,6.5,7.0,92,115,1,0,groq,3.3,305,26000
+University of Alberta,Canada,94,6.5,7.0,90,120,1,0,groq,3.0,307,18000
+University of Technology Sydney,Australia,96,6.5,7.0,83,105,1,0,groq,3.2,300,28000
+The University of Nottingham,UK,97,6.5,7.0,88,115,0,0,groq,3.2,0,24000
+Carnegie Mellon University in Qatar,Qatar,97,6.5,7.0,100,115,1,0,manual,3.5,318,58000
+Karlsruhe Institute of Technology (KIT),Germany,98,6.5,7.0,88,105,0,0,groq,3.2,0,700
+Rheinisch-Westfälische Technische Hochschule Aachen,Germany,105,6.5,7.0,88,110,0,0,groq,3.2,0,700
+Queen Mary University of London (QMUL),UK,110,6.5,7.0,90,115,0,0,groq,3.2,0,26000
+Qatar University,Qatar,112,5.5,6.0,68,95,0,0,groq,3.0,0,10000
+University of St Andrews,UK,113,6.5,7.0,92,115,0,0,groq,3.3,0,26000
+University of Waterloo,Canada,119,6.5,7.0,90,115,1,0,groq,3.2,315,19000
+RMIT University,Australia,125,6.5,7.0,79,105,0,0,groq,3.0,0,26000
+Humboldt-Universität zu Berlin,Germany,130,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Bath,UK,132,6.5,7.0,88,115,0,0,groq,3.2,0,24000
+Newcastle University,UK,137,6.5,7.0,88,115,0,0,groq,3.2,0,22000
+Macquarie University,Australia,138,6.5,7.0,83,105,0,0,groq,3.2,0,26000
+Technische Universität Berlin,Germany,145,6.5,7.0,88,105,0,0,groq,3.2,0,700
+University of Liverpool,UK,147,6.5,7.0,88,115,0,0,groq,3.1,0,21000
+Western University,Canada,151,6.5,7.0,86,115,1,0,groq,3.0,305,18000
+University of Exeter,UK,155,6.5,7.0,88,115,0,0,groq,3.2,0,22000
+Lancaster University,UK,157,6.5,7.0,87,115,0,0,groq,3.2,0,22000
+University of Montreal,Canada,168,6.5,7.0,86,115,1,0,groq,3.0,302,14000
+University of York,UK,169,6.5,7.0,87,115,0,0,groq,3.2,0,22000
+McMaster University,Canada,173,6.5,7.0,86,115,1,0,groq,3.2,308,18000
+Cardiff University,UK,181,6.5,7.0,88,115,0,0,groq,3.2,0,22000
+Curtin University,Australia,183,6.0,6.5,79,105,0,0,groq,3.0,0,24000
+University of Wollongong,Australia,184,6.0,6.5,79,105,0,0,groq,3.0,0,22000
+"Queen's University, Ontario",Canada,191,6.5,7.0,88,115,1,0,groq,3.2,308,18000
+Universität Hamburg,Germany,193,6.0,6.5,88,105,0,0,groq,3.0,0,700
+University of Reading,UK,194,6.5,7.0,88,115,0,0,groq,3.1,0,21000
+Queen's University Belfast,UK,199,6.5,7.0,88,105,0,0,groq,3.1,0,20000
+Universität Freiburg,Germany,201,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Rheinische Friedrich-Wilhelms-Universität Bonn,Germany,207,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Deakin University,Australia,207,6.0,6.5,79,105,0,0,groq,3.0,0,22000
+University of Calgary,Canada,211,6.5,7.0,86,115,1,0,groq,3.0,305,17000
+Eberhard Karls Universität Tübingen,Germany,215,6.5,7.0,79,105,0,0,groq,2.9,0,700
+Technische Universität Dresden,Germany,218,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Ottawa,Canada,219,6.5,7.0,86,115,1,0,groq,3.0,303,17000
+Loughborough University,UK,225,6.5,7.0,88,115,0,0,groq,3.1,0,22000
+Queensland University of Technology,Australia,226,6.5,7.0,79,105,0,0,groq,2.8,0,24000
+The University of Newcastle,Australia,227,6.0,6.5,79,105,0,0,groq,2.8,0,22000
+Universität Erlangen-Nürnberg,Germany,232,6.5,7.0,88,105,0,0,groq,3.0,0,700
+La Trobe University,Australia,233,6.0,6.5,79,105,0,0,groq,3.0,0,20000
+Georg-August-Universität Göttingen,Germany,243,6.0,6.5,80,105,0,0,groq,3.0,0,700
+Hamad Bin Khalifa University,Qatar,244,6.5,7.0,90,110,1,1,groq,3.0,305,15000
+University of Strathclyde,UK,251,6.5,7.0,88,110,0,0,groq,3.0,0,20000
+Technische Universität Darmstadt,Germany,253,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Aberdeen,UK,262,6.0,6.5,87,110,0,0,groq,3.0,0,20000
+University of Surrey,UK,262,6.5,7.0,88,115,0,0,groq,3.0,0,21000
+Griffith University,Australia,268,6.0,6.5,79,105,0,0,groq,3.0,0,20000
+Universität zu Köln,Germany,272,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Sussex,UK,278,6.5,7.0,88,115,0,0,groq,3.0,0,21000
+Dalhousie University,Canada,283,6.5,7.0,90,115,1,0,groq,2.8,302,16000
+Heriot-Watt University,UK,287,6.0,6.5,79,105,0,0,groq,3.0,0,19000
+Georgetown University in Qatar,Qatar,288,6.5,7.0,96,115,0,0,manual,3.3,0,30000
+Swansea University,UK,292,6.0,6.5,79,105,0,0,groq,3.0,0,18000
+Swinburne University of Technology,Australia,294,6.0,6.5,79,105,0,0,groq,3.0,0,20000
+Simon Fraser University,Canada,308,6.5,7.0,90,115,1,0,groq,3.0,305,16000
+"City St George’s, University of London",UK,310,6.0,6.5,79,105,0,0,groq,2.8,0,20000
+Universität Stuttgart,Germany,310,6.5,7.0,88,110,0,0,groq,3.0,0,700
+University of Tasmania,Australia,314,6.0,6.5,79,105,0,0,groq,2.8,0,18000
+Goethe Universität Frankfurt am Main,Germany,316,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Leicester,UK,326,6.5,7.0,83,110,0,0,groq,3.0,0,20000
+York University,Canada,333,6.5,7.0,86,115,1,0,groq,3.0,300,15000
+University of Münster,Germany,350,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Weill Cornell Medicine - Qatar,Qatar,350,6.5,7.0,100,120,0,0,manual,3.6,0,40000
+University of Victoria,Canada,358,6.5,7.0,90,115,1,0,groq,3.0,303,16000
+Oxford Brookes University,UK,374,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+University of Saskatchewan,Canada,378,6.5,7.0,86,115,1,0,groq,3.0,300,15000
+University of East Anglia (UEA),UK,381,6.5,7.0,87,110,0,0,groq,3.0,0,19000
+Brunel University of London,UK,385,6.0,6.5,83,100,0,0,groq,3.0,0,19000
+Flinders University,Australia,387,6.0,6.5,79,105,0,0,groq,3.0,0,20000
+"Birkbeck College, University of London",UK,388,6.5,7.0,88,115,0,1,groq,2.8,0,17000
+Aston University,UK,395,6.0,6.5,80,105,0,0,groq,2.8,0,18000
+Ruhr-Universität Bochum,Germany,395,6.0,6.5,79,105,0,0,groq,2.8,0,700
+University of Kent,UK,397,6.0,6.5,80,105,0,0,groq,3.0,0,18000
+Western Sydney University,Australia,400,6.0,6.5,79,105,0,0,groq,2.8,0,19000
+University of Southern Queensland,Australia,410,6.0,6.5,79,105,0,0,groq,2.8,0,17000
+Universität Mannheim,Germany,416,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Julius-Maximilians-Universität Würzburg,Germany,416,6.5,7.0,88,105,0,0,groq,2.9,0,700
+Murdoch University,Australia,423,6.0,6.5,79,105,0,0,groq,2.8,0,18000
+University of Dundee,UK,428,6.0,6.5,80,105,0,0,groq,2.8,0,18000
+Leibniz Universität Hannover,Germany,433,6.5,7.0,88,105,0,0,groq,3.0,0,700
+James Cook University,Australia,440,6.0,6.5,79,105,0,0,groq,2.8,0,18000
+Universität Konstanz,Germany,440,6.5,7.0,88,105,0,0,groq,2.9,0,700
+Universität Bayreuth,Germany,448,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Johannes Gutenberg Universität Mainz,Germany,452,6.5,7.0,88,105,0,0,groq,3.0,0,700
+University of Essex,UK,456,6.0,6.5,80,110,0,0,groq,2.8,0,18000
+Royal Holloway University of London,UK,461,6.5,7.0,88,115,0,0,groq,2.9,0,20000
+Concordia University,Canada,465,6.5,7.0,86,115,1,0,groq,2.8,298,14000
+Laval University,Canada,469,6.5,7.0,86,115,1,0,groq,2.8,297,13000
+Universität Potsdam,Germany,477,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Technische Universität Bergakademie Freiberg,Germany,487,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Edith Cowan University,Australia,487,6.0,6.5,79,105,0,0,groq,2.8,0,17000
+Northwestern University in Qatar,Qatar,491,6.5,7.0,90,110,0,0,manual,3.2,0,35000
+University of Canberra,Australia,494,6.0,6.5,79,105,0,0,groq,2.8,0,18000
+Justus-Liebig-Universität Gießen,Germany,496,6.5,7.0,79,105,0,0,groq,3.0,0,700
+Central Queensland University Australia (CQUniversity),Australia,499,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Texas A&M University at Qatar,Qatar,501,6.5,7.0,90,110,1,0,manual,3.2,305,25000
+University of Guelph,Canada,504,6.5,7.0,89,115,1,0,groq,2.8,298,15000
+SOAS University of London,UK,511,6.5,7.0,88,115,0,0,groq,3.0,0,20000
+University of Bradford,UK,511,6.0,6.0,79,100,0,0,groq,2.8,0,16000
+University of Stirling,UK,517,6.0,6.5,80,105,0,0,groq,3.0,0,17000
+University of Huddersfield,UK,524,6.0,6.5,79,105,0,0,groq,3.0,0,15000
+University of Hull,UK,526,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Universität Bremen,Germany,530,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Universität Leipzig,Germany,535,6.0,6.5,88,105,0,0,groq,2.9,0,700
+Universität Ulm,Germany,546,6.0,6.5,79,105,0,0,groq,3.0,0,700
+University of Windsor,Canada,546,6.5,7.0,83,110,1,0,groq,3.0,296,14000
+Northumbria University at Newcastle,UK,550,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Coventry University,UK,558,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Bangor University,UK,566,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Universität Jena,Germany,575,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Charles Darwin University,Australia,584,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Bond University,Australia,591,6.0,6.5,79,105,0,0,groq,2.8,0,22000
+Nottingham Trent University,UK,609,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+University of Ulster,UK,609,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Plymouth,UK,613,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Christian-Albrechts-Universität zu Kiel,Germany,618,6.0,6.5,88,105,0,0,groq,3.0,0,700
+University of New Brunswick,Canada,622,6.5,7.0,86,115,1,0,groq,2.8,295,13000
+University of Portsmouth,UK,635,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Universität des Saarlandes,Germany,635,6.0,6.5,88,105,0,0,groq,3.0,0,700
+Southern Cross University,Australia,638,6.0,6.5,72,105,0,0,groq,2.8,0,16000
+Manchester Metropolitan University,UK,643,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Manitoba,Canada,643,6.5,7.0,86,115,1,0,groq,2.8,300,14000
+"Kingston University, London",UK,660,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+Memorial University of Newfoundland,Canada,660,6.5,7.0,80,115,1,0,groq,3.0,293,13000
+Technische Universität Dortmund,Germany,673,6.0,6.5,88,105,0,0,groq,3.0,0,700
+Universität Regensburg,Germany,691,6.0,6.5,79,105,0,0,groq,3.0,0,700
+TUHH Hamburg University of Technology,Germany,696,6.5,7.0,88,105,0,0,groq,2.9,0,700
+HEC Paris in Qatar,Qatar,701,6.5,7.5,100,120,0,1,manual,3.4,0,45000
+Toronto Metropolitan University (formerly Ryerson University),Canada,711,6.5,7.0,79,105,1,0,groq,3.0,295,15000
+Technische Universität Braunschweig,Germany,711,6.5,7.0,88,105,0,0,groq,2.9,0,700
+"Goldsmiths, University of London",UK,711,6.5,7.0,88,115,0,0,groq,2.8,0,19000
+Universität Hohenheim,Germany,711,6.5,7.0,88,105,0,0,groq,3.0,0,700
+UWE Bristol (University of the West of England),UK,721,6.0,6.5,79,100,0,0,groq,2.8,0,15000
+Aberystwyth University,UK,741,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Victoria University,Australia,741,6.0,6.5,72,105,0,0,groq,2.8,0,18000
+Martin-Luther-Universität Halle-Wittenberg,Germany,751,6.0,6.5,88,105,0,0,groq,2.9,0,700
+Philipps-Universität Marburg,Germany,771,6.0,6.5,88,105,0,0,groq,2.9,0,700
+Carleton University,Canada,781,6.5,7.0,86,115,1,0,groq,2.8,300,15000
+Universität Duisburg-Essen,Germany,801,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Middlesex University,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Bournemouth University,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+De Montfort University,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Keele University,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+University of Calgary in Qatar,Qatar,801,6.5,7.0,86,110,0,0,manual,3.1,0,20000
+University of Doha for Science and Technology,Qatar,801,6.0,6.5,79,105,0,0,manual,3.0,0,12000
+University of Brighton,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Greenwich,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Lincoln,UK,801,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Westminster,UK,801,6.5,7.0,88,105,0,0,groq,3.0,0,700
+Australian Catholic University,Australia,851,6.0,6.5,79,105,0,0,groq,2.8,0,17000
+Edinburgh Napier University,UK,851,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Liverpool John Moores University,UK,851,6.0,6.5,79,95,0,0,groq,2.8,0,15000
+Universität Düsseldorf,Germany,851,6.0,6.5,79,105,0,0,groq,2.9,0,700
+Universität Rostock,Germany,851,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Université du Québec,Canada,851,6.0,6.5,79,105,1,0,groq,2.8,290,10000
+London South Bank University,UK,901,6.0,6.5,79,95,0,0,groq,2.8,0,15000
+Université de Sherbrooke,Canada,901,6.5,7.0,86,115,1,0,groq,3.0,293,12000
+University of Hertfordshire,UK,901,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+University of Salford,UK,901,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Doha Institute for Graduate Studies,Qatar,901,6.0,6.5,79,105,0,0,manual,3.0,0,15000
+Charles Sturt University,Australia,951,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+The Robert Gordon University,UK,951,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Sheffield Hallam University,UK,1001,6.0,6.5,79,105,0,0,groq,2.8,0,14000
+Glasgow Caledonian University,UK,1001,6.0,6.5,79,105,0,0,groq,2.8,0,15000
+Birmingham City University,UK,1001,6.0,6.0,79,95,0,0,groq,2.8,0,14000
+London Metropolitan University,UK,1001,6.0,6.0,79,95,0,0,groq,2.8,0,14000
+Leeds Beckett University,UK,1001,6.0,6.0,79,95,0,0,groq,2.8,0,14000
+Universität Bielefeld,Germany,1001,6.0,6.5,79,105,0,0,groq,3.0,0,700
+Virginia Commonwealth University School of the Arts in Qatar,Qatar,1001,6.0,6.5,79,100,0,0,manual,2.8,0,22000
+CUC Ulster University Qatar,Qatar,1001,6.0,6.5,79,100,0,0,manual,2.8,0,14000
+University of Central Lancashire,UK,1001,6.0,6.0,79,95,0,0,groq,2.8,0,14000
+University of Wolverhampton,UK,1001,6.0,6.0,72,90,0,0,groq,2.8,0,13000
+University of East London,UK,1001,6.0,6.0,79,105,0,0,groq,2.8,0,14000
+University of New England,Australia,1001,6.0,6.5,79,105,0,0,groq,2.8,0,16000
+University of Regina,Canada,1001,6.5,7.0,80,105,1,0,groq,3.0,293,12000
+University of Derby,UK,1201,6.0,6.0,79,95,0,0,groq,2.8,0,13000
+The University of Northampton,UK,1201,6.0,6.0,72,95,0,0,groq,2.8,0,13000
+"The University of Notre Dame, Australia",Australia,1201,6.5,7.0,79,105,0,0,groq,2.8,0,18000
+Universität Siegen,Germany,1201,6.0,6.5,79,105,0,0,groq,2.9,0,700
+Technische Universität Kaiserslautern,Germany,1201,6.0,6.5,88,105,0,0,groq,2.9,0,700
+Brock University,Canada,1201,6.5,7.0,83,110,1,0,groq,2.8,292,14000
+Canterbury Christ Church University,UK,1201,6.0,6.0,72,95,0,0,groq,2.8,0,14000
+"Queen Margaret University , Edinburgh",UK,1201,6.0,6.5,79,105,0,0,groq,2.8,0,14000

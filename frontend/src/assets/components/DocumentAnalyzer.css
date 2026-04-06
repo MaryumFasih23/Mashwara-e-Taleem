@@ -4,7 +4,7 @@
 
 .da-title {
   text-align: center;
-  font-size: 34px;
+  font-size: 30px;
   color: #b55239;
   font-weight: 700;
   margin-bottom: 5px;
@@ -13,7 +13,7 @@
 .da-subtitle {
   text-align: center;
   color: #444;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 /* TABS */
@@ -21,7 +21,7 @@
   display: flex;
   justify-content: center;
   gap: 15px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .da-tab {
@@ -42,28 +42,29 @@
 .da-main {
   display: flex;
   justify-content: space-between;
-  gap: 30px;
+  gap: 24px;
+  align-items: flex-start;  /* don't stretch panels to equal height */
 }
 
 /* LEFT: UPLOAD BOX */
 .da-upload-box {
   width: 48%;
   background: #c7e2d3;
-  padding: 25px;
+  padding: 22px;
   border-radius: 15px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
 .da-upload-area {
   border: 2px dashed #5a7f70;
-  padding: 50px 20px;
+  padding: 40px 20px;
   border-radius: 15px;
   text-align: center;
 }
 
 .da-upload-icon {
-  font-size: 40px;
-  margin-bottom: 10px;
+  font-size: 36px;
+  margin-bottom: 8px;
 }
 
 .da-browse {
@@ -79,7 +80,7 @@
 .da-results {
   width: 48%;
   background: #c7e2d3;
-  padding: 25px;
+  padding: 22px;
   border-radius: 15px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
@@ -98,12 +99,49 @@
   line-height: 40px;
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
+/* Feedback box: scrollable, fixed height so it doesn't push layout */
 .da-feedback-box {
   background: white;
   border-radius: 15px;
   padding: 15px;
-  height: 200px;
+  height: 220px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.da-feedback-box::-webkit-scrollbar {
+  width: 6px;
+}
+.da-feedback-box::-webkit-scrollbar-thumb {
+  background: rgba(12, 79, 74, 0.35);
+  border-radius: 999px;
+}
+
+.da-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #5a7f70;
+  background: white;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.da-submit {
+  padding: 11px 20px;
+  border-radius: 20px;
+  border: none;
+  background: #5f8677;
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.da-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
