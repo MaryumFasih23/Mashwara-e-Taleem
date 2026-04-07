@@ -8,7 +8,7 @@ export default function DashboardHome() {
       <div className="dh-container">
 
         {/* WELCOME TITLE */}
-        <h1 className="dh-title">Welcome Back Maryum!</h1>
+        {/* <h1 className="dh-title">Welcome Back Maryum!</h1> */}
 
         {/* QUICK ACTION BUTTONS */}
         <div className="dh-actions">
