@@ -1,6 +1,9 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../../AuthContext";
-import { getUniversityRecommendations } from "../../api/universityapi";
+import {
+  getUniversityProgramEligibility,
+  getUniversityRecommendations,
+} from "../../api/universityapi";
 import "./Universities.css";
 
 const RESULTS_PER_PAGE = 6;
@@ -16,12 +19,18 @@ function formatPercent(value) {
   return `${(normalized * 100).toFixed(2)}%`;
 }
 
+function normalizeCountryLabel(country) {
+  const value = String(country || "").trim();
+  return value || "Unknown";
+}
+
 export default function Universities() {
   const { user } = useContext(AuthContext);
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("bestMatch");
   const [minMatch, setMinMatch] = useState("all");
+  const [selectedCountries, setSelectedCountries] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,14 +38,22 @@ export default function Universities() {
   const [results, setResults] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [selectedUniversity, setSelectedUniversity] = useState(null);
+  const [programs, setPrograms] = useState([]);
+  const [programLoading, setProgramLoading] = useState(false);
+  const [programError, setProgramError] = useState("");
+  const [programWarnings, setProgramWarnings] = useState([]);
+
   useEffect(() => {
     if (!user?.uid) return;
 
     let active = true;
     setLoading(true);
     setError("");
+    setSelectedUniversity(null);
+    setPrograms([]);
+    setProgramError("");
 
-    // Always request recommendations with a minimum 10% eligibility floor.
     getUniversityRecommendations(user.uid, { minProb: 0.1, topK: 5000 })
       .then((data) => {
         if (!active) return;
@@ -58,11 +75,36 @@ export default function Universities() {
     };
   }, [user]);
 
+  const countryOptions = useMemo(() => {
+    const set = new Set();
+    results.forEach((item) => set.add(normalizeCountryLabel(item.country)));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [results]);
+
+  useEffect(() => {
+    if (countryOptions.length === 0) {
+      setSelectedCountries([]);
+      return;
+    }
+
+    setSelectedCountries((previous) => {
+      if (previous.length === 0) {
+        return [...countryOptions];
+      }
+
+      const filtered = previous.filter((country) => countryOptions.includes(country));
+      return filtered.length > 0 ? filtered : [...countryOptions];
+    });
+  }, [countryOptions]);
+
   const filteredResults = useMemo(() => {
     let list = [...results];
 
-    // Hard floor: do not list universities below 10% eligibility.
     list = list.filter((item) => Number(item.eligibility_probability) >= 0.1);
+
+    if (selectedCountries.length > 0) {
+      list = list.filter((item) => selectedCountries.includes(normalizeCountryLabel(item.country)));
+    }
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -78,25 +120,23 @@ export default function Universities() {
     }
 
     if (sortBy === "lowestTuition") {
-      // Primary: lowest tuition. Secondary: highest eligibility within same tuition tier.
       list.sort((a, b) => {
         const tuitionDiff = Number(a.tuition_usd || 0) - Number(b.tuition_usd || 0);
         if (tuitionDiff !== 0) return tuitionDiff;
         return Number(b.eligibility_probability || 0) - Number(a.eligibility_probability || 0);
       });
     } else {
-      // bestMatch: final_score = 0.4 * eligibility + 0.6 * QS prestige
       list.sort((a, b) => Number(b.final_score || 0) - Number(a.final_score || 0));
     }
 
     return list;
-  }, [results, search, minMatch, sortBy]);
+  }, [results, search, minMatch, sortBy, selectedCountries]);
 
   const totalPages = Math.max(1, Math.ceil(filteredResults.length / RESULTS_PER_PAGE));
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, minMatch, sortBy, user?.uid]);
+  }, [search, minMatch, sortBy, selectedCountries, user?.uid]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -112,151 +152,318 @@ export default function Universities() {
   const pageStartIndex = filteredResults.length === 0 ? 0 : (currentPage - 1) * RESULTS_PER_PAGE + 1;
   const pageEndIndex = Math.min(currentPage * RESULTS_PER_PAGE, filteredResults.length);
 
+  const handleCountryToggle = (country) => {
+    setSelectedCountries((previous) => {
+      if (previous.includes(country)) {
+        return previous.filter((value) => value !== country);
+      }
+      return [...previous, country];
+    });
+  };
+
+  const openPrograms = async (uni) => {
+    if (!user?.uid) return;
+
+    setSelectedUniversity(uni);
+    setProgramLoading(true);
+    setProgramError("");
+    setProgramWarnings([]);
+    setPrograms([]);
+
+    try {
+      const data = await getUniversityProgramEligibility(user.uid, {
+        university: uni.university,
+        country: uni.country,
+        topK: 50,
+      });
+
+      setPrograms(data.results || []);
+      setProgramWarnings(data.warnings || []);
+    } catch (err) {
+      const apiMessage = err?.response?.data?.error;
+      const apiDetail = err?.response?.data?.detail;
+      setProgramError(apiDetail ? `${apiMessage}: ${apiDetail}` : apiMessage || "Failed to fetch program eligibility.");
+    } finally {
+      setProgramLoading(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setMinMatch("all");
+    setSortBy("bestMatch");
+    setSelectedCountries([...countryOptions]);
+  };
+
   return (
     <div className="uni-container">
       <h1 className="uni-title">Universities</h1>
 
-      <div className="uni-top">
-        <div className="uni-filters">
-          <h3>Filters</h3>
-
-          <input
-            type="text"
-            placeholder="Search university..."
-            className="uni-search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <label className="uni-label">Minimum Match Score</label>
-          <select className="uni-select" value={minMatch} onChange={(e) => setMinMatch(e.target.value)}>
-            <option value="all">All Ranges</option>
-            <option value="90">90%+</option>
-            <option value="70">70%+</option>
-            <option value="50">50%+</option>
-          </select>
-
+      {selectedUniversity ? (
+        <div className="uni-programs-view">
           <button
-            className="uni-reset"
+            className="uni-back-btn"
             onClick={() => {
-              setSearch("");
-              setMinMatch("all");
-              setSortBy("bestMatch");
+              setSelectedUniversity(null);
+              setPrograms([]);
+              setProgramError("");
+              setProgramWarnings([]);
             }}
           >
-            Reset Filters
+            ← Back to Universities
           </button>
-        </div>
 
-        <div className="uni-list">
-          <div className="uni-sort">
-            <span>
-              {loading
-                ? "Loading recommendations..."
-                : `Showing ${pageStartIndex}-${pageEndIndex} of ${filteredResults.length} Universities`}
-            </span>
+          <h2 className="uni-programs-title">
+            Program Eligibility for {selectedUniversity.university} ({normalizeCountryLabel(selectedUniversity.country)})
+          </h2>
 
-            <div>
-              Sort by:{" "}
-              <select className="uni-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option value="bestMatch">Best Match</option>
-                <option value="lowestTuition">Lowest Tuition</option>
-              </select>
+          {programWarnings.length > 0 && (
+            <div className="uni-note">
+              <strong>Profile notes:</strong> {programWarnings.join(" ")}
             </div>
+          )}
+
+          {programError && <div className="uni-error">{programError}</div>}
+
+          {programLoading && <div className="uni-empty">Loading program eligibility...</div>}
+
+          {!programLoading && !programError && programs.length === 0 && (
+            <div className="uni-empty">No program eligibility data found for this university.</div>
+          )}
+
+          {!programLoading && !programError && programs.length > 0 && (
+            <div className="uni-program-list">
+              {programs.map((program) => (
+                <div
+                  className="uni-card"
+                  key={`${program.university_name}-${program.program_name}-${program.degree_type}`}
+                >
+                  <div className="uni-card-info">
+                    <h2 className="uni-card-title">{program.program_name}</h2>
+                    <p>
+                      University: <span className="red">{program.university_name}</span>
+                    </p>
+                    <p>
+                      Category: <span className="red">{program.program_category || "N/A"}</span>
+                    </p>
+                    <p>
+                      Level: <span className="red">{program.program_level || program.degree_type || "N/A"}</span>
+                    </p>
+                    <p>
+                      Duration: <span className="red">{program.program_duration_years || "N/A"} years</span>
+                    </p>
+                    <p>
+                      Tuition/Year: <span className="red">{formatCurrency(Number(program.tuition_fee_usd))}</span>
+                    </p>
+                    <p>
+                      Min GPA: <span className="red">{Number(program.min_gpa || 0).toFixed(2)}</span>
+                    </p>
+                    <p>
+                      Min IELTS: <span className="red">{Number(program.min_ielts_overall || 0).toFixed(1)}</span>
+                    </p>
+                    <p>
+                      Min TOEFL: <span className="red">{Math.round(Number(program.toefl_score || 0))}</span>
+                    </p>
+                    <p>
+                      Eligibility: <span className="green">{formatPercent(Number(program.eligibility_probability || 0))}</span>
+                    </p>
+                    {program.university_url && (
+                      <p>
+                        <a href={program.university_url} target="_blank" rel="noreferrer" className="uni-link">
+                          Visit University Website
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="uni-top">
+          <div className="uni-filters">
+            <h3>Filters</h3>
+
+            <input
+              type="text"
+              placeholder="Search university..."
+              className="uni-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <label className="uni-label">Countries</label>
+            <div className="uni-country-list">
+              {countryOptions.map((country) => (
+                <label className="uni-country-item" key={country}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCountries.includes(country)}
+                    onChange={() => handleCountryToggle(country)}
+                  />
+                  <span>{country}</span>
+                </label>
+              ))}
+            </div>
+
+            <label className="uni-label">Minimum Match Score</label>
+            <select className="uni-select" value={minMatch} onChange={(e) => setMinMatch(e.target.value)}>
+              <option value="all">All Ranges</option>
+              <option value="90">90%+</option>
+              <option value="70">70%+</option>
+              <option value="50">50%+</option>
+            </select>
+
+            <button className="uni-reset" onClick={resetFilters}>
+              Reset Filters
+            </button>
           </div>
 
-          {warnings.length > 0 && (
-            <div className="uni-note">
-              <strong>Profile notes:</strong> {warnings.join(" ")}
-            </div>
-          )}
-
-          {error && <div className="uni-error">{error}</div>}
-
-          {!loading && !error && filteredResults.length === 0 && (
-            <div className="uni-empty">No universities found. Update your profile scores and try again.</div>
-          )}
-
-          {!loading &&
-            !error &&
-            paginatedResults.map((uni) => (
-              <div className="uni-card" key={`${uni.university}-${uni.url || "no-url"}`}>
-                <div className="uni-card-info">
-                  <h2 className="uni-card-title">{uni.university}</h2>
-                  {Number(uni.qs_rank) < 1000 && (
-                    <p className="uni-qs-badge">QS Rank: <span className="qs-num">#{uni.qs_rank}</span></p>
-                  )}
-                  <p>Tuition/Year: <span className="red">{formatCurrency(Number(uni.tuition_usd))}</span></p>
-                  <p>Min GPA: <span className="red">{Number(uni.min_gpa || 0).toFixed(2)}</span></p>
-                  <p>Min SAT: <span className="red">{Math.round(Number(uni.min_sat || 0))}</span></p>
-                  <p>Min TOEFL: <span className="red">{Math.round(Number(uni.min_toefl || 0))}</span></p>
-                  <p>Min IELTS: <span className="red">{Number(uni.min_ielts || 0).toFixed(1)}</span></p>
-                  <p>
-                    Eligibility: <span className="green">{formatPercent(Number(uni.eligibility_probability || 0))}</span>
-                  </p>
-                  {uni.url && (
-                    <p>
-                      <a href={uni.url} target="_blank" rel="noreferrer" className="uni-link">
-                        Visit University Website
-                      </a>
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-          {!loading && !error && filteredResults.length > 0 && totalPages > 1 && (
-            <div className="uni-pagination">
-              <button
-                className="uni-page-btn uni-page-nav"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              >
-                ‹ Prev
-              </button>
-
-              {(() => {
-                const pages = [];
-                const delta = 2;
-                const left = Math.max(2, currentPage - delta);
-                const right = Math.min(totalPages - 1, currentPage + delta);
-
-                pages.push(1);
-                if (left > 2) pages.push("start-ellipsis");
-                for (let i = left; i <= right; i++) pages.push(i);
-                if (right < totalPages - 1) pages.push("end-ellipsis");
-                if (totalPages > 1) pages.push(totalPages);
-
-                return pages.map((page) =>
-                  typeof page === "string" ? (
-                    <span key={page} className="uni-page-ellipsis">…</span>
-                  ) : (
-                    <button
-                      key={page}
-                      className={page === currentPage ? "uni-page-btn active" : "uni-page-btn"}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  )
-                );
-              })()}
-
-              <button
-                className="uni-page-btn uni-page-nav"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              >
-                Next ›
-              </button>
-
-              <span className="uni-page-info">
-                Page {currentPage} of {totalPages}
+          <div className="uni-list">
+            <div className="uni-sort">
+              <span>
+                {loading
+                  ? "Loading recommendations..."
+                  : `Showing ${pageStartIndex}-${pageEndIndex} of ${filteredResults.length} Universities`}
               </span>
+
+              <div>
+                Sort by:{" "}
+                <select className="uni-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="bestMatch">Best Match</option>
+                  <option value="lowestTuition">Lowest Tuition</option>
+                </select>
+              </div>
             </div>
-          )}
+
+            {warnings.length > 0 && (
+              <div className="uni-note">
+                <strong>Profile notes:</strong> {warnings.join(" ")}
+              </div>
+            )}
+
+            {error && <div className="uni-error">{error}</div>}
+
+            {!loading && !error && filteredResults.length === 0 && (
+              <div className="uni-empty">No universities found. Update your profile scores and try again.</div>
+            )}
+
+            {!loading &&
+              !error &&
+              paginatedResults.map((uni) => (
+                <div
+                  className="uni-card uni-card-clickable"
+                  key={`${uni.university}-${uni.country}-${uni.url || "no-url"}`}
+                  onClick={() => openPrograms(uni)}
+                >
+                  <div className="uni-card-info">
+                    <h2 className="uni-card-title">{uni.university}</h2>
+                    <p>
+                      Country: <span className="red">{normalizeCountryLabel(uni.country)}</span>
+                    </p>
+                    {Number(uni.qs_rank) > 0 && (
+                      <p className="uni-qs-badge">
+                        Rank: <span className="qs-num">#{Math.round(Number(uni.qs_rank))}</span>
+                      </p>
+                    )}
+                    <p>
+                      Tuition/Year: <span className="red">{formatCurrency(Number(uni.tuition_usd))}</span>
+                    </p>
+                    <p>
+                      Min GPA: <span className="red">{Number(uni.min_gpa || 0).toFixed(2)}</span>
+                    </p>
+                    {Number(uni.min_sat || 0) > 0 && (
+                      <p>
+                        Min SAT: <span className="red">{Math.round(Number(uni.min_sat || 0))}</span>
+                      </p>
+                    )}
+                    {Number(uni.min_toefl || 0) > 0 && (
+                      <p>
+                        Min TOEFL: <span className="red">{Math.round(Number(uni.min_toefl || 0))}</span>
+                      </p>
+                    )}
+                    {Number(uni.min_ielts || 0) > 0 && (
+                      <p>
+                        Min IELTS: <span className="red">{Number(uni.min_ielts || 0).toFixed(1)}</span>
+                      </p>
+                    )}
+                    <p>
+                      Eligibility: <span className="green">{formatPercent(Number(uni.eligibility_probability || 0))}</span>
+                    </p>
+                    <p className="uni-card-hint">Click this card to view eligible programs.</p>
+                    {uni.url && (
+                      <p>
+                        <a
+                          href={uni.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="uni-link"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Visit University Website
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+            {!loading && !error && filteredResults.length > 0 && totalPages > 1 && (
+              <div className="uni-pagination">
+                <button
+                  className="uni-page-btn uni-page-nav"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                >
+                  ‹ Prev
+                </button>
+
+                {(() => {
+                  const pages = [];
+                  const delta = 2;
+                  const left = Math.max(2, currentPage - delta);
+                  const right = Math.min(totalPages - 1, currentPage + delta);
+
+                  pages.push(1);
+                  if (left > 2) pages.push("start-ellipsis");
+                  for (let i = left; i <= right; i++) pages.push(i);
+                  if (right < totalPages - 1) pages.push("end-ellipsis");
+                  if (totalPages > 1) pages.push(totalPages);
+
+                  return pages.map((page) =>
+                    typeof page === "string" ? (
+                      <span key={page} className="uni-page-ellipsis">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        className={page === currentPage ? "uni-page-btn active" : "uni-page-btn"}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    )
+                  );
+                })()}
+
+                <button
+                  className="uni-page-btn uni-page-nav"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                >
+                  Next ›
+                </button>
+
+                <span className="uni-page-info">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

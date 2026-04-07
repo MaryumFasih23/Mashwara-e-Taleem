@@ -12,3 +12,15 @@ export const getUniversityRecommendations = async (uid, options = {}) => {
 
   return res.data;
 };
+
+export const getUniversityProgramEligibility = async (uid, options = {}) => {
+  const university = options.university ?? "";
+  const country = options.country ?? "";
+  const topK = options.topK ?? 50;
+
+  const res = await axios.get(`${API_URL}/programs/${uid}`, {
+    params: { university, country, topK },
+  });
+
+  return res.data;
+};

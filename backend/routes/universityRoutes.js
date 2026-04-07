@@ -8,7 +8,7 @@ const router = express.Router();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const modelScriptPath = path.join(__dirname, "..", "uni_eligibility_model", "predict_eligibility.py");
+const inferenceScriptPath = path.join(__dirname, "..", "ml", "recommendation_engine.py");
 const pythonCmd = process.env.PYTHON_CMD || "python";
 
 function toNumber(value) {
@@ -50,25 +50,29 @@ function buildModelInput(user) {
   const satRaw = toNumber(user.sat);
   const actRaw = toNumber(user.act);
   const ieltsRaw = toNumber(user.ielts);
+  const ieltsBandRaw = toNumber(user.ieltsBand);
   const toeflRaw = toNumber(user.toefl);
+  const greRaw = toNumber(user.greTotal);
+  const duolingoRaw = toNumber(user.duolingo);
+  const workExperienceRaw = toNumber(user.workExperience);
   const gpa = normalizeGpa(user.cgpa, user.cgpaOutOf);
 
-  const sat = satRaw === null ? null : clamp(satRaw, 400, 1600);
+  const sat = satRaw === null ? null : clamp(satRaw, 0, 1600);
 
   let act = actRaw;
   let actInferred = false;
-  if (act === null && sat !== null) {
+  if (act === null && sat !== null && sat > 0) {
     act = estimateActFromSat(sat);
     actInferred = true;
   }
   if (act !== null) {
-    act = clamp(act, 1, 36);
+    act = clamp(act, 0, 36);
   }
 
   const ielts = ieltsRaw === null ? null : clamp(ieltsRaw, 0, 9);
+  const ieltsBand = ieltsBandRaw === null ? null : clamp(ieltsBandRaw, 0, 9);
 
   let toefl = toeflRaw;
-  // Profiles sometimes store TOEFL on a /10 scale; map it to /120.
   if (toefl !== null && toefl <= 12) {
     toefl = toefl * 12;
   }
@@ -87,11 +91,16 @@ function buildModelInput(user) {
 
   return {
     input: {
-      SAT: sat ?? 0,
-      ACT: act ?? 0,
-      IELTS: ielts ?? 0,
-      TOEFL: toefl ?? 0,
-      GPA: gpa ?? 0,
+      sat: sat ?? 0,
+      act: act ?? 0,
+      ielts: ielts ?? 0,
+      ieltsBand: ieltsBand ?? ielts ?? 0,
+      toefl: toefl ?? 0,
+      cgpa: gpa ?? 0,
+      cgpaOutOf: 4,
+      greTotal: greRaw ?? 0,
+      duolingo: duolingoRaw ?? 0,
+      workExperience: workExperienceRaw ?? 0,
     },
     warnings,
   };
@@ -99,8 +108,8 @@ function buildModelInput(user) {
 
 function runInference(payload) {
   return new Promise((resolve, reject) => {
-    const py = spawn(pythonCmd, [modelScriptPath], {
-      cwd: path.dirname(modelScriptPath),
+    const py = spawn(pythonCmd, [inferenceScriptPath], {
+      cwd: path.dirname(inferenceScriptPath),
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -121,7 +130,7 @@ function runInference(payload) {
 
     py.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(stderr || `Python process failed with exit code ${code}`));
+        reject(new Error(stderr || stdout || `Python process failed with exit code ${code}`));
         return;
       }
 
@@ -143,13 +152,8 @@ router.get("/recommendations/:uid", async (req, res) => {
     const minProbRaw = Number(req.query.minProb);
     const topKRaw = Number(req.query.topK);
 
-    const minProb = Number.isFinite(minProbRaw)
-      ? Math.min(Math.max(minProbRaw, 0), 1)
-      : 0.1;
-    const effectiveMinProb = Math.max(minProb, 0.1);
-    const topK = Number.isFinite(topKRaw)
-      ? Math.min(Math.max(Math.trunc(topKRaw), 1), 10000)
-      : 5000;
+    const minProb = Number.isFinite(minProbRaw) ? Math.min(Math.max(minProbRaw, 0), 1) : 0.1;
+    const topK = Number.isFinite(topKRaw) ? Math.min(Math.max(Math.trunc(topKRaw), 1), 10000) : 5000;
 
     const user = await User.findOne({ uid: req.params.uid }).lean();
     if (!user) {
@@ -157,21 +161,27 @@ router.get("/recommendations/:uid", async (req, res) => {
     }
 
     const { input, warnings } = buildModelInput(user);
-    const inferencePayload = { ...input, min_prob: effectiveMinProb, top_k: topK };
+    const inferencePayload = {
+      mode: "universities",
+      profile: input,
+      min_prob: minProb,
+      top_k: topK,
+    };
 
-    let modelResult = await runInference(inferencePayload);
-    let fallbackApplied = false;
+    const modelResult = await runInference(inferencePayload);
 
-    // If strict threshold returns no rows, retry with baseline 10% threshold.
-    if (!Array.isArray(modelResult?.top_results) || modelResult.top_results.length === 0) {
-      modelResult = await runInference({ ...input, min_prob: 0.1, top_k: topK });
-      fallbackApplied = true;
-      warnings.push("No universities matched your current threshold. Showing results with at least 10% eligibility.");
+    if (modelResult?.error) {
+      throw new Error(modelResult.error);
     }
 
-    const filteredResults = Array.isArray(modelResult?.top_results)
-      ? modelResult.top_results
-          .filter((item) => Number(item?.eligibility_probability) >= 0.1)
+    const resultWarnings = [
+      ...warnings,
+      ...(Array.isArray(modelResult?.warnings) ? modelResult.warnings : []),
+    ];
+
+    const results = Array.isArray(modelResult?.results)
+      ? modelResult.results
+          .filter((item) => Number(item?.eligibility_probability) >= minProb)
           .slice(0, topK)
       : [];
 
@@ -179,10 +189,9 @@ router.get("/recommendations/:uid", async (req, res) => {
       message: "University recommendations generated",
       fromProfileUid: req.params.uid,
       inputUsed: input,
-      warnings,
-      fallbackApplied,
-      totalUniversities: filteredResults.length,
-      results: filteredResults,
+      warnings: resultWarnings,
+      totalUniversities: results.length,
+      results,
     });
   } catch (error) {
     const detail = String(error?.message || "");
@@ -192,6 +201,56 @@ router.get("/recommendations/:uid", async (req, res) => {
       error: missingPython
         ? "Python runtime not found. Set PYTHON_CMD env var or install Python."
         : "Failed to generate recommendations",
+      detail,
+    });
+  }
+});
+
+router.get("/programs/:uid", async (req, res) => {
+  try {
+    const university = String(req.query.university || "").trim();
+    const country = String(req.query.country || "").trim();
+    const topKRaw = Number(req.query.topK);
+    const topK = Number.isFinite(topKRaw) ? Math.min(Math.max(Math.trunc(topKRaw), 1), 500) : 50;
+
+    if (!university) {
+      return res.status(400).json({ error: "Query param 'university' is required" });
+    }
+
+    const user = await User.findOne({ uid: req.params.uid }).lean();
+    if (!user) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    const { input, warnings } = buildModelInput(user);
+    const modelResult = await runInference({
+      mode: "programs",
+      profile: input,
+      university,
+      country,
+      top_k: topK,
+    });
+
+    if (modelResult?.error) {
+      throw new Error(modelResult.error);
+    }
+
+    return res.status(200).json({
+      message: "Program eligibility generated",
+      fromProfileUid: req.params.uid,
+      university,
+      country,
+      warnings: [
+        ...warnings,
+        ...(Array.isArray(modelResult?.warnings) ? modelResult.warnings : []),
+      ],
+      totalPrograms: Array.isArray(modelResult?.results) ? modelResult.results.length : 0,
+      results: Array.isArray(modelResult?.results) ? modelResult.results : [],
+    });
+  } catch (error) {
+    const detail = String(error?.message || "");
+    return res.status(500).json({
+      error: "Failed to generate program eligibility",
       detail,
     });
   }
