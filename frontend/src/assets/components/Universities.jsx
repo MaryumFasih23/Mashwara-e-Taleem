@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../../AuthContext";
 import {
   getUniversityProgramEligibility,
-  getUniversityRecommendations,
 } from "../../api/universityapi";
 import "./Universities.css";
 
@@ -24,8 +23,86 @@ function normalizeCountryLabel(country) {
   return value || "Unknown";
 }
 
+const COUNTRY_CODE_OVERRIDES = {
+  usa: "US",
+  us: "US",
+  uk: "GB",
+  uae: "AE",
+  "united states": "US",
+  "united states of america": "US",
+  "united kingdom": "GB",
+  england: "GB",
+  scotland: "GB",
+  wales: "GB",
+  "south korea": "KR",
+  "north korea": "KP",
+  russia: "RU",
+  vietnam: "VN",
+  laos: "LA",
+  iran: "IR",
+  syria: "SY",
+  bolivia: "BO",
+  tanzania: "TZ",
+  venezuela: "VE",
+  moldova: "MD",
+  palestine: "PS",
+  kosovo: "XK",
+};
+
+function toCountryCode(country) {
+  const raw = String(country || "").trim();
+  if (!raw) return "";
+
+  if (/^[A-Za-z]{2}$/.test(raw)) {
+    const twoLetter = raw.toUpperCase();
+    if (twoLetter === "UK") return "GB";
+    return twoLetter;
+  }
+
+  const key = raw
+    .toLowerCase()
+    .replace(/[().,]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Handle common variants where country names include extra qualifiers.
+  if (key.includes("united kingdom") || key === "uk" || key.includes("great britain") || key.includes("britain")) {
+    return "GB";
+  }
+
+  if (key.includes("united states") || key === "usa" || key === "us") {
+    return "US";
+  }
+
+  if (COUNTRY_CODE_OVERRIDES[key]) {
+    return COUNTRY_CODE_OVERRIDES[key];
+  }
+
+  try {
+    const display = new Intl.DisplayNames(["en"], { type: "region" });
+    const regionCodes = [
+      "AE", "AR", "AT", "AU", "BD", "BE", "BG", "BH", "BR", "CA", "CH", "CL", "CN", "CO", "CZ", "DE", "DK", "DZ", "EE", "EG", "ES", "FI", "FR", "GB", "GR", "HK", "HR", "HU", "ID", "IE", "IL", "IN", "IQ", "IR", "IT", "JO", "JP", "KE", "KR", "KW", "KZ", "LB", "LK", "LT", "LU", "LV", "MA", "MM", "MX", "MY", "NG", "NL", "NO", "NP", "NZ", "OM", "PH", "PK", "PL", "PT", "QA", "RO", "RS", "RU", "SA", "SE", "SG", "SI", "SK", "TH", "TN", "TR", "TW", "UA", "US", "VN", "ZA",
+    ];
+
+    const matched = regionCodes.find((code) => {
+      const name = display.of(code);
+      return name && name.toLowerCase() === key;
+    });
+
+    return matched || "";
+  } catch {
+    return "";
+  }
+}
+
+function getCountryFlagImageUrl(country) {
+  const code = toCountryCode(country);
+  if (!/^[A-Z]{2}$/.test(code)) return "";
+  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+}
+
 export default function Universities() {
-  const { user } = useContext(AuthContext);
+  const { user, universities, universitiesLoading, universitiesError, getCachedPrograms, setProgramsCache } = useContext(AuthContext);
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("bestMatch");
@@ -44,36 +121,22 @@ export default function Universities() {
   const [programError, setProgramError] = useState("");
   const [programWarnings, setProgramWarnings] = useState([]);
 
+  // Use cached universities from context instead of fetching on mount
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setResults([]);
+      setError("");
+      setWarnings([]);
+      return;
+    }
 
-    let active = true;
-    setLoading(true);
-    setError("");
+    setLoading(universitiesLoading);
+    setError(universitiesError);
+    setResults(universities);
     setSelectedUniversity(null);
     setPrograms([]);
     setProgramError("");
-
-    getUniversityRecommendations(user.uid, { minProb: 0.1, topK: 5000 })
-      .then((data) => {
-        if (!active) return;
-        setResults(data.results || []);
-        setWarnings(data.warnings || []);
-      })
-      .catch((err) => {
-        if (!active) return;
-        const apiMessage = err?.response?.data?.error;
-        const apiDetail = err?.response?.data?.detail;
-        setError(apiDetail ? `${apiMessage}: ${apiDetail}` : apiMessage || "Failed to fetch recommendations.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user]);
+  }, [universities, universitiesLoading, universitiesError, user?.uid]);
 
   const countryOptions = useMemo(() => {
     const set = new Set();
@@ -165,10 +228,24 @@ export default function Universities() {
     if (!user?.uid) return;
 
     setSelectedUniversity(uni);
-    setProgramLoading(true);
     setProgramError("");
     setProgramWarnings([]);
     setPrograms([]);
+
+    // Create cache key from university and country
+    const cacheKey = `${uni.university}---${uni.country}`;
+
+    // Check if programs are already cached
+    const cachedData = getCachedPrograms(cacheKey);
+    if (cachedData) {
+      // Instant load from cache
+      setPrograms(cachedData.results || []);
+      setProgramWarnings(cachedData.warnings || []);
+      return;
+    }
+
+    // Not cached, so fetch from API
+    setProgramLoading(true);
 
     try {
       const data = await getUniversityProgramEligibility(user.uid, {
@@ -179,6 +256,9 @@ export default function Universities() {
 
       setPrograms(data.results || []);
       setProgramWarnings(data.warnings || []);
+
+      // Cache the programs for future use
+      setProgramsCache(cacheKey, data);
     } catch (err) {
       const apiMessage = err?.response?.data?.error;
       const apiDetail = err?.response?.data?.detail;
@@ -197,7 +277,7 @@ export default function Universities() {
 
   return (
     <div className="uni-container">
-      <h1 className="uni-title">Universities</h1>
+      {/* <h1 className="uni-title">Universities</h1> */}
 
       {selectedUniversity ? (
         <div className="uni-programs-view">
@@ -360,7 +440,7 @@ export default function Universities() {
                   <div className="uni-card-info">
                     <h2 className="uni-card-title">{uni.university}</h2>
                     <p>
-                      Country: <span className="red">{normalizeCountryLabel(uni.country)}</span>
+                      Country: <span className="red">{getCountryFlagImageUrl(uni.country) && <img className="uni-flag-img" src={getCountryFlagImageUrl(uni.country)} alt={`${normalizeCountryLabel(uni.country)} flag`} loading="lazy" />} {normalizeCountryLabel(uni.country)}</span>
                     </p>
                     {Number(uni.qs_rank) > 0 && (
                       <p className="uni-qs-badge">

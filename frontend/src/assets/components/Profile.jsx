@@ -4,7 +4,7 @@ import { AuthContext } from "../../AuthContext";
 import { getUserProfile, updateUserProfile } from "../../api/userapi";
 
 export default function Profile() {
-  const { user } = useContext(AuthContext);
+  const { user, refetchUniversities } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("personal");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -120,6 +120,8 @@ export default function Profile() {
       };
       await updateUserProfile(user.uid, payload);
       setSaveMsg("✅ Profile saved successfully!");
+      // Trigger background refetch of universities with updated profile
+      refetchUniversities();
     } catch {
       setSaveMsg("❌ Failed to save. Please try again.");
     }
