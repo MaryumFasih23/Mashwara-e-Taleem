@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }) {
           <NavLink to="/dashboard/scholarships" className="dash-link">Scholarships</NavLink>
           <NavLink to="/dashboard/analyzer" className="dash-link">Document Analyzer</NavLink>
           <NavLink to="/dashboard/ai-advisor" className="dash-link">AI Advisor</NavLink>
-          <NavLink to="/dashboard/statistics" className="dash-link">Statistics</NavLink>
+          <NavLink to="/dashboard/visa-guidance" className="dash-link">Visa Guidance</NavLink>
         </nav>
 
         <div className="dash-bottom-links">

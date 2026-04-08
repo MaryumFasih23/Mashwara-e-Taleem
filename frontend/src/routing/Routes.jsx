@@ -13,6 +13,7 @@ import Scholarships from "../assets/components/Scholarships";
 import DocumentAnalyzer from "../assets/components/DocumentAnalyzer";
 import AIAdvisor from "../assets/components/AIAdvisor";
 import Profile from "../assets/components/Profile";
+import VisaGuidance from "../assets/components/VisaGuidance";
 
 const AppRoutes = createBrowserRouter([
   {
@@ -59,6 +60,9 @@ const AppRoutes = createBrowserRouter([
 
       // /dashboard/profile
       { path: "profile", element: <Profile /> },
+
+      // /dashboard/visa-guidance
+      { path: "visa-guidance", element: <VisaGuidance /> },
     ],
   },
 ]);
