@@ -21,12 +21,15 @@ const userSchema = new mongoose.Schema({
 
   // Test Scores
   ielts: { type: String, default: "" },
+  ieltsBand: { type: String, default: "" },
   toefl: { type: String, default: "" },
+  duolingo: { type: String, default: "" },
   greTotal: { type: String, default: "" },
-  gmat: { type: String, default: "" },
   greVerbal: { type: String, default: "" },
   greQuant: { type: String, default: "" },
+  gmat: { type: String, default: "" },
   sat: { type: String, default: "" },
+  act: { type: String, default: "" },
 
   // Preferences
   preferredStudyLevel: { type: String, default: "Masters" },

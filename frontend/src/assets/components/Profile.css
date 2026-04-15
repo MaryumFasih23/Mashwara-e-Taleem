@@ -1,5 +1,5 @@
 /* ===============================
-   PROFILE PAGE — Exact Figma Match
+   PROFILE PAGE
    =============================== */
 
 :root {
@@ -26,10 +26,7 @@
   font-family: var(--font-ui);
 }
 
-/* =============================
-   PAGE TITLE
-   ============================= */
-
+/* ── PAGE TITLE ── */
 .profile-title {
   text-align: center;
   font-size: 34px;
@@ -38,10 +35,7 @@
   margin-bottom: 20px;
 }
 
-/* =============================
-   PROFILE HEADER CARD
-   ============================= */
-
+/* ── HEADER CARD ── */
 .profile-header-card {
   width: 80%;
   margin: 0 auto 25px auto;
@@ -49,7 +43,6 @@
   background: var(--peach-box);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-heavy);
-
   display: flex;
   align-items: center;
   gap: 25px;
@@ -81,15 +74,13 @@
   opacity: 0.9;
 }
 
-/* =============================
-   TAB BUTTON BAR
-   ============================= */
-
+/* ── TAB BAR ── */
 .profile-tabs {
   display: flex;
   justify-content: center;
   gap: 14px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -114,10 +105,7 @@
   box-shadow: var(--shadow-heavy);
 }
 
-/* =============================
-   MAIN CONTENT CARD
-   ============================= */
-
+/* ── MAIN CONTENT CARD ── */
 .profile-content-card {
   width: 85%;
   margin: 0 auto 40px auto;
@@ -138,10 +126,7 @@
   font-weight: 700;
 }
 
-/* =============================
-   FORM ROWS
-   ============================= */
-
+/* ── FORM ROWS ── */
 .form-row {
   display: flex;
   gap: 20px;
@@ -168,12 +153,136 @@
   background: white;
   font-size: 14px;
   box-shadow: var(--shadow-soft);
+  transition: 0.2s;
 }
 
-/* =============================
-   TAGS (Countries, preferred intakes, etc.)
-   ============================= */
+.form-group input:focus,
+.form-group select:focus {
+  outline: 2px solid var(--deep-green);
+}
 
+/* Dimmed/secondary input (not primary for this study level) */
+.input-secondary {
+  background: #f0f0f0 !important;
+  color: #888 !important;
+}
+
+/* ── SCORE RANGE HINT ── */
+.score-range {
+  font-size: 11px;
+  font-weight: 400;
+  color: #555;
+}
+
+/* ── FIELD HINT (below input) ── */
+.field-hint {
+  font-size: 11.5px;
+  color: #5a6e65;
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+/* ── TEST SCORES TAB SPECIFIC ── */
+
+/* Context banner */
+.test-context-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #dff0e8;
+  border-left: 4px solid var(--deep-green);
+  border-radius: var(--radius-inner);
+  padding: 14px 16px;
+  margin-bottom: 24px;
+}
+
+.test-context-icon {
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.test-context-banner strong {
+  font-size: 14px;
+  display: block;
+  margin-bottom: 4px;
+  color: #2d4a3e;
+}
+
+.test-context-banner p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #3a5248;
+  line-height: 1.5;
+}
+
+.test-context-hint {
+  font-size: 12px;
+  color: #587f70;
+}
+
+/* Section headers with badge */
+.test-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 6px;
+}
+
+.test-section-header.test-section-dimmed {
+  opacity: 0.65;
+}
+
+.test-section-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.badge-all {
+  background: #587f70;
+  color: white;
+}
+
+.badge-bachelors {
+  background: #c97d3a;
+  color: white;
+}
+
+.badge-masters {
+  background: #3a6bc9;
+  color: white;
+}
+
+/* Section description */
+.test-section-desc {
+  font-size: 12.5px;
+  color: #4a5e57;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.test-not-primary {
+  color: #888;
+  font-style: italic;
+}
+
+/* Tip note box */
+.profile-test-note {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: #eef7f2;
+  border-left: 4px solid #587f70;
+  border-radius: var(--radius-inner);
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ── TAGS ── */
 .tag-row {
   display: flex;
   gap: 10px;
@@ -190,30 +299,15 @@
   box-shadow: var(--shadow-soft);
 }
 
-/* Upload tag (Resume, PS, Transcript) */
-.upload-tag {
-  background: var(--upload-green);
-  padding: 8px 18px;
-  border-radius: var(--radius-inner);
-  color: white;
-  font-weight: 600;
-  box-shadow: var(--shadow-soft);
-}
-
-/* =============================
-   CHECKBOX AREAS
-   ============================= */
-
+/* ── CHECKBOXES ── */
 .checks label {
   margin-bottom: 8px;
   font-size: 14px;
   display: block;
+  cursor: pointer;
 }
 
-/* =============================
-   TEXTAREA (Extracurriculars, Career Goals)
-   ============================= */
-
+/* ── TEXTAREA ── */
 .profile-textarea {
   padding: 12px;
   border-radius: var(--radius-inner);
@@ -228,10 +322,7 @@
   box-sizing: border-box;
 }
 
-/* =============================
-   DOCUMENT UPLOAD
-   ============================= */
-
+/* ── DOCUMENT UPLOAD ── */
 .doc-upload-row {
   display: flex;
   flex-direction: column;

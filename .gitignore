@@ -14,7 +14,31 @@ __pycache__/
 dist/
 build/
 
+# =========================
 # ML / embeddings (IMPORTANT)
+# =========================
+
+# Document Analyzer embeddings
 backend/document_analyzer/data/*.pkl
 backend/document_analyzer/data/*.bin
 backend/document_analyzer/data/*.index
+
+# Chatbot embeddings
+backend/chatbot/chatbot_data/*.pkl
+backend/chatbot/chatbot_data/*.bin
+backend/chatbot/chatbot_data/*.index
+
+# =========================
+# General fallback (extra safety)
+# =========================
+*.pkl
+*.bin
+*.index
+
+# Virtual environments
+venv/
+backend/document_analyzer/venv/
+backend/chatbot/venv/
+
+# Optional local tool folder
+.codex

@@ -11,9 +11,12 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ── CONFIG ──────────────────────────────────────────────────────
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 LLM_MODEL    = "llama-3.3-70b-versatile"
 EMBED_MODEL  = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -485,7 +488,6 @@ async def analyze_document(
         doc_type       = classification.get("doc_type", "SOP")
         fmt            = format_check(text, doc_type)
 
-        # Use pre-loaded indexes (no reload on every request)
         unis       = _state["unis"]
         progs      = _state["progs"]
         uni_index  = _state["uni_index"]
@@ -519,6 +521,8 @@ async def analyze_document(
     except ValueError as ve:
         return JSONResponse({"error": str(ve)}, status_code=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"error": f"Internal server error: {str(e)}"}, status_code=500)
     finally:
         if os.path.exists(tmp_path):
