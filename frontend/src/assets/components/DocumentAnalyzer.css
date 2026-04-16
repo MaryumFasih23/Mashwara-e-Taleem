@@ -85,6 +85,21 @@
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
+.da-section-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.da-section-header {
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 15px;
+  color: #0c4f4a;
+}
+
 .da-result-title {
   margin: 10px 0 5px;
   font-weight: 700;
@@ -102,6 +117,41 @@
   margin-bottom: 16px;
 }
 
+.da-overview-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.da-overview-metric {
+  flex: 1;
+}
+
+.da-tag-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.da-overview-lists {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.da-overview-column {
+  flex: 1;
+  font-size: 13px;
+}
+
+.da-overview-column ul {
+  padding-left: 18px;
+  margin: 4px 0 0;
+}
+
 /* Feedback box: scrollable, fixed height so it doesn't push layout */
 .da-feedback-box {
   background: white;
@@ -110,6 +160,13 @@
   height: 220px;
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+.da-rewrite-box {
+  height: 180px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 13px;
 }
 
 .da-feedback-box::-webkit-scrollbar {
@@ -144,4 +201,170 @@
 .da-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.da-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 6px;
+  margin-bottom: 4px;
+  background: #e3c4b8;
+  color: #3b2b25;
+}
+
+.da-tag-line {
+  background: #c7e2d3;
+  color: #0c4f4a;
+}
+
+.da-tag-type {
+  background: #f4decf;
+}
+
+.da-tag-severity {
+  background: #f5c1b8;
+}
+
+.da-severity-critical {
+  background: #d64545;
+  color: #fff;
+}
+
+.da-severity-important {
+  background: #f29f3d;
+  color: #fff;
+}
+
+.da-severity-minor {
+  background: #f4decf;
+  color: #3b2b25;
+}
+
+.da-line-issue-list {
+  max-height: 190px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.da-line-issue-item {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.da-line-issue-meta {
+  margin-bottom: 4px;
+}
+
+.da-line-issue-body {
+  font-size: 13px;
+}
+
+.da-line-original,
+.da-line-improved {
+  margin: 2px 0;
+}
+
+.da-line-explanation {
+  margin: 2px 0;
+  font-size: 12px;
+  color: #555;
+}
+
+.da-inline-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.da-muted {
+  font-size: 12px;
+  color: #666;
+}
+
+.da-section-columns {
+  display: flex;
+  gap: 10px;
+}
+
+.da-section-column {
+  flex: 1;
+  font-size: 13px;
+}
+
+.da-small-scroll {
+  max-height: 170px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.da-sentence-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.da-sentence-section {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0c4f4a;
+  margin-bottom: 2px;
+}
+
+.da-section-block {
+  margin-bottom: 8px;
+}
+
+.da-section-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #0c4f4a;
+}
+
+.da-section-block-row {
+  display: flex;
+  gap: 8px;
+}
+
+.da-mini-heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.da-section-block-row ul {
+  padding-left: 16px;
+  margin: 2px 0 0;
+}
+
+.da-keyword-list {
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.da-keyword-placement-item {
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.da-bullet-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 13px;
+}
+
+.da-bullet-issues {
+  padding-left: 16px;
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.da-action-plan-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
 }

@@ -42,15 +42,26 @@ export default function DocumentAnalyzer() {
     }
   };
 
-  const score    = result?.evaluation?.overall_score ?? 0;
-  const label    = result?.evaluation?.overall_quality_label ?? "";
-  const strengths   = result?.evaluation?.strengths  ?? [];
-  const weaknesses  = result?.evaluation?.weaknesses ?? [];
-  const rewrite     = result?.evaluation?.rewrite_output?.improved_document ?? "";
-  const atsScore    = result?.ats_score?.ats_score;
-  const grammarScore = result?.grammar?.grammar_quality_score;
-  const missingKws  = result?.evaluation?.program_specificity?.missing_keywords_to_add ?? [];
-  const actionPlan  = result?.evaluation?.action_plan_next_revision ?? [];
+  const score          = result?.evaluation?.overall_score ?? 0;
+  const label          = result?.evaluation?.overall_quality_label ?? "";
+  const strengths      = result?.evaluation?.strengths  ?? [];
+  const weaknesses     = result?.evaluation?.weaknesses ?? [];
+  const rewrite        = result?.evaluation?.rewrite_output?.improved_document ?? "";
+  const atsScore       = result?.ats_score?.ats_score;
+  const grammarScore   = result?.grammar?.grammar_quality_score;
+  const missingKws     = result?.evaluation?.program_specificity?.missing_keywords_to_add ?? [];
+  const actionPlan     = result?.evaluation?.action_plan_next_revision ?? [];
+  const lineIssues     = result?.evaluation?.line_issues ?? [];
+  const sectionAnalysis = result?.evaluation?.section_analysis ?? {};
+  const sentenceImprovements =
+    result?.evaluation?.sentence_level_improvements ?? [];
+  const keywordPlacement =
+    result?.evaluation?.program_specificity?.keyword_placement_suggestions ?? [];
+  const mismatchNotes =
+    result?.evaluation?.program_specificity?.mismatch_notes ?? [];
+  const resumeBullets =
+    result?.evaluation?.resume_bullet_analysis ?? [];
+  const docType = result?.classification?.doc_type;
 
   return (
     <div className="da-container">
@@ -137,75 +148,356 @@ export default function DocumentAnalyzer() {
 
         {/* RIGHT SIDE — RESULTS */}
         <div className="da-results">
-          <h3 className="da-result-title">Quality Score:</h3>
-          <div className="da-score-box">
-            {result ? `${score}% — ${label}` : "0%"}
+          {/* OVERVIEW CARD */}
+          <div className="da-section-card">
+            <h3 className="da-section-header">Overall Overview</h3>
+            <div className="da-overview-row">
+              <div className="da-overview-metric">
+                <p className="da-tag-label">Quality Score</p>
+                <div className="da-score-box">
+                  {result ? `${score}% — ${label}` : "0%"}
+                </div>
+              </div>
+              {result && grammarScore !== undefined && (
+                <div className="da-overview-metric">
+                  <p className="da-tag-label">Grammar</p>
+                  <div className="da-score-box">{grammarScore}%</div>
+                </div>
+              )}
+              {result && atsScore !== undefined && (
+                <div className="da-overview-metric">
+                  <p className="da-tag-label">ATS (Resume)</p>
+                  <div className="da-score-box">{atsScore}%</div>
+                </div>
+              )}
+            </div>
+
+            <div className="da-overview-lists">
+              <div className="da-overview-column">
+                <p className="da-tag-label">Top Strengths</p>
+                {result && strengths.length > 0 ? (
+                  <ul>
+                    {strengths.slice(0, 3).map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="da-muted">No strengths identified yet.</p>
+                )}
+              </div>
+              <div className="da-overview-column">
+                <p className="da-tag-label">Key Weaknesses</p>
+                {result && weaknesses.length > 0 ? (
+                  <ul>
+                    {weaknesses.slice(0, 3).map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="da-muted">No major weaknesses detected.</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {result && grammarScore !== undefined && (
-            <>
-              <h3 className="da-result-title">Grammar Score:</h3>
-              <div className="da-score-box">{grammarScore}%</div>
-            </>
-          )}
+          {/* LINE-BY-LINE ISSUES CARD */}
+          <div className="da-section-card">
+            <h3 className="da-section-header">Line-by-line Issues</h3>
+            {!result && <p className="da-muted">Run an analysis to see issues.</p>}
+            {result && lineIssues.length === 0 && (
+              <p className="da-muted">No significant line-level issues detected.</p>
+            )}
+            {result && lineIssues.length > 0 && (
+              <div className="da-line-issue-list">
+                {lineIssues
+                  .slice()
+                  .sort((a, b) => {
+                    const sevOrder = { critical: 0, important: 1, minor: 2 };
+                    const sa = sevOrder[a.severity] ?? 3;
+                    const sb = sevOrder[b.severity] ?? 3;
+                    if (sa !== sb) return sa - sb;
+                    return (a.line_number ?? 0) - (b.line_number ?? 0);
+                  })
+                  .map((li, idx) => (
+                    <div key={idx} className="da-line-issue-item">
+                      <div className="da-line-issue-meta">
+                        <span className="da-tag da-tag-line">
+                          Line {li.line_number}
+                        </span>
+                        {li.issue_type && (
+                          <span className="da-tag da-tag-type">
+                            {li.issue_type.replace("_", " ")}
+                          </span>
+                        )}
+                        {li.severity && (
+                          <span
+                            className={
+                              "da-tag da-tag-severity da-severity-" + li.severity
+                            }
+                          >
+                            {li.severity}
+                          </span>
+                        )}
+                      </div>
+                      <div className="da-line-issue-body">
+                        {li.original_line && (
+                          <p className="da-line-original">
+                            <span className="da-inline-label">Original:</span>{" "}
+                            {li.original_line}
+                          </p>
+                        )}
+                        {li.improved_line && (
+                          <p className="da-line-improved">
+                            <span className="da-inline-label">Suggested:</span>{" "}
+                            {li.improved_line}
+                          </p>
+                        )}
+                        {li.explanation && (
+                          <p className="da-line-explanation">{li.explanation}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
 
-          {result && atsScore !== undefined && (
-            <>
-              <h3 className="da-result-title">ATS Score:</h3>
-              <div className="da-score-box">{atsScore}%</div>
-            </>
-          )}
+          {/* SENTENCE & SECTION ANALYSIS CARD */}
+          <div className="da-section-card">
+            <h3 className="da-section-header">Sentence &amp; Section Insights</h3>
+            {!result && <p className="da-muted">Run an analysis to see insights.</p>}
+            {result && (
+              <div className="da-section-columns">
+                <div className="da-section-column">
+                  <p className="da-tag-label">Sentence-level Improvements</p>
+                  {sentenceImprovements.length === 0 ? (
+                    <p className="da-muted">No specific sentence issues highlighted.</p>
+                  ) : (
+                    <div className="da-small-scroll">
+                      {sentenceImprovements.map((s, i) => (
+                        <div key={i} className="da-sentence-item">
+                          {s.section && (
+                            <p className="da-sentence-section">{s.section}</p>
+                          )}
+                          {s.original_sentence && (
+                            <p className="da-line-original">
+                              <span className="da-inline-label">Original:</span>{" "}
+                              {s.original_sentence}
+                            </p>
+                          )}
+                          {s.improved_sentence && (
+                            <p className="da-line-improved">
+                              <span className="da-inline-label">Suggested:</span>{" "}
+                              {s.improved_sentence}
+                            </p>
+                          )}
+                          {s.explanation && (
+                            <p className="da-line-explanation">{s.explanation}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-          <h3 className="da-result-title">Feedback:</h3>
-          <div className="da-feedback-box">
-            {!result && <p>No feedback yet.</p>}
+                <div className="da-section-column">
+                  <p className="da-tag-label">Section-level Feedback</p>
+                  {Object.keys(sectionAnalysis).length === 0 ? (
+                    <p className="da-muted">No section-level feedback available.</p>
+                  ) : (
+                    <div className="da-small-scroll">
+                      {Object.entries(sectionAnalysis).map(([key, sec]) => (
+                        <div key={key} className="da-section-block">
+                          <h4 className="da-section-block-title">
+                            {sec.title || key}
+                          </h4>
+                          <div className="da-section-block-row">
+                            <div>
+                              <p className="da-mini-heading">What is good</p>
+                              {sec.what_is_good && sec.what_is_good.length > 0 ? (
+                                <ul>
+                                  {sec.what_is_good.map((g, i) => (
+                                    <li key={i}>{g}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="da-muted">No highlights noted.</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="da-mini-heading">What is missing</p>
+                              {sec.what_is_missing &&
+                              sec.what_is_missing.length > 0 ? (
+                                <ul>
+                                  {sec.what_is_missing.map((m, i) => (
+                                    <li key={i}>{m}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="da-muted">Nothing critical flagged.</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="da-mini-heading">What to improve</p>
+                              {sec.what_to_improve &&
+                              sec.what_to_improve.length > 0 ? (
+                                <ul>
+                                  {sec.what_to_improve.map((im, i) => (
+                                    <li key={i}>{im}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="da-muted">No concrete edits suggested.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PROGRAM ALIGNMENT CARD */}
+          <div className="da-section-card">
+            <h3 className="da-section-header">Program Alignment</h3>
+            {!result && <p className="da-muted">Run an analysis to see alignment.</p>}
             {result && (
               <>
-                {strengths.length > 0 && (
-                  <>
-                    <p style={{ fontWeight: 700, marginBottom: 4 }}>✅ Strengths:</p>
-                    <ul style={{ paddingLeft: 18, marginBottom: 10 }}>
-                      {strengths.map((s, i) => <li key={i}>{s}</li>)}
+                <p className="da-tag-label">Missing / Recommended Keywords</p>
+                {missingKws.length === 0 ? (
+                  <p className="da-muted">No missing program-specific keywords detected.</p>
+                ) : (
+                  <p className="da-keyword-list">{missingKws.join(", ")}</p>
+                )}
+
+                {keywordPlacement.length > 0 && (
+                  <div className="da-small-scroll" style={{ marginTop: 10 }}>
+                    {keywordPlacement.map((kp, i) => (
+                      <div key={i} className="da-keyword-placement-item">
+                        <span className="da-tag da-tag-type">
+                          {kp.section || "Section"}
+                        </span>
+                        <p>
+                          Add <strong>{kp.keyword}</strong> like:{" "}
+                          {kp.suggested_sentence_or_fragment}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {mismatchNotes.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="da-tag-label">Document–Program Mismatches</p>
+                    <ul>
+                      {mismatchNotes.map((m, i) => (
+                        <li key={i}>{m}</li>
+                      ))}
                     </ul>
-                  </>
-                )}
-                {weaknesses.length > 0 && (
-                  <>
-                    <p style={{ fontWeight: 700, marginBottom: 4 }}>❌ Weaknesses:</p>
-                    <ul style={{ paddingLeft: 18, marginBottom: 10 }}>
-                      {weaknesses.map((w, i) => <li key={i}>{w}</li>)}
-                    </ul>
-                  </>
-                )}
-                {missingKws.length > 0 && (
-                  <>
-                    <p style={{ fontWeight: 700, marginBottom: 4 }}>🔑 Missing Keywords:</p>
-                    <p style={{ marginBottom: 10 }}>{missingKws.join(", ")}</p>
-                  </>
-                )}
-                {actionPlan.length > 0 && (
-                  <>
-                    <p style={{ fontWeight: 700, marginBottom: 4 }}>📌 Action Plan:</p>
-                    <ol style={{ paddingLeft: 18 }}>
-                      {actionPlan.map((a, i) => <li key={i}>{a}</li>)}
-                    </ol>
-                  </>
+                  </div>
                 )}
               </>
             )}
           </div>
 
-          {rewrite && (
-            <>
-              <h3 className="da-result-title">Improved Document:</h3>
-              <textarea
-                className="da-feedback-box"
-                style={{ height: "250px", resize: "vertical", fontFamily: "monospace", fontSize: 13 }}
-                readOnly
-                value={rewrite}
-              />
-            </>
+          {/* RESUME BULLETS CARD (RESUME ONLY) */}
+          {docType === "RESUME" && (
+            <div className="da-section-card">
+              <h3 className="da-section-header">Resume Bullet Review</h3>
+              {!result && (
+                <p className="da-muted">Upload a resume to see bullet feedback.</p>
+              )}
+              {result && resumeBullets.length === 0 && (
+                <p className="da-muted">
+                  No individual bullet feedback was generated. Try adding more
+                  detailed experience bullets.
+                </p>
+              )}
+              {result && resumeBullets.length > 0 && (
+                <div className="da-small-scroll">
+                  {resumeBullets.map((b, i) => (
+                    <div key={i} className="da-bullet-item">
+                      <div className="da-line-issue-meta">
+                        {b.section && (
+                          <span className="da-tag da-tag-line">{b.section}</span>
+                        )}
+                        <span className="da-tag da-tag-type">
+                          {b.has_action_verb ? "Has action verb" : "Add action verb"}
+                        </span>
+                        <span className="da-tag da-tag-type">
+                          {b.has_metric ? "Has metric" : "Add metric"}
+                        </span>
+                        {typeof b.program_relevance_score === "number" && (
+                          <span className="da-tag da-tag-severity">
+                            Relevance {b.program_relevance_score}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="da-line-original">
+                        <span className="da-inline-label">Bullet:</span>{" "}
+                        {b.bullet_text}
+                      </p>
+                      {b.improved_bullet && (
+                        <p className="da-line-improved">
+                          <span className="da-inline-label">Suggested:</span>{" "}
+                          {b.improved_bullet}
+                        </p>
+                      )}
+                      {Array.isArray(b.issues) && b.issues.length > 0 && (
+                        <ul className="da-bullet-issues">
+                          {b.issues.map((iss, idx) => (
+                            <li key={idx}>{iss}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
+
+          {/* ACTION PLAN + FULL REWRITE CARD */}
+          <div className="da-section-card">
+            <h3 className="da-section-header">Action Plan &amp; Improved Draft</h3>
+            {!result && <p className="da-muted">Run an analysis to see suggestions.</p>}
+            {result && (
+              <>
+                <p className="da-tag-label">Prioritized Fixes</p>
+                {Array.isArray(actionPlan) && actionPlan.length > 0 ? (
+                  <ol className="da-action-plan-list">
+                    {actionPlan.map((a, i) => (
+                      <li key={i}>
+                        {typeof a === "string"
+                          ? a
+                          : `${a.item} ${
+                              a.priority ? `(${a.priority} priority)` : ""
+                            }`}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="da-muted">No explicit action plan was generated.</p>
+                )}
+
+                {rewrite && (
+                  <>
+                    <p className="da-tag-label" style={{ marginTop: 10 }}>
+                      Improved Document (AI Rewrite)
+                    </p>
+                    <textarea
+                      className="da-feedback-box da-rewrite-box"
+                      readOnly
+                      value={rewrite}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
       </div>

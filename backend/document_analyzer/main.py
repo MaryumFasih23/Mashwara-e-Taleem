@@ -384,6 +384,81 @@ def ats_score(text, context, fmt):
         "suggestions": suggestions
     }
 
+
+def build_analysis_scaffold(text: str, doc_type: str):
+    """
+    Build a lightweight scaffold the LLM can use to anchor feedback to
+    concrete line numbers and coarse sections. This is heuristic on purpose
+    but stable: we never mutate the text here, only describe it.
+    """
+    lines_raw = text.splitlines()
+    lines = []
+    for idx, t in enumerate(lines_raw, start=1):
+        lines.append({"line_number": idx, "text": t})
+
+    sections = []
+    n = len(lines_raw)
+
+    if doc_type == "RESUME":
+        # Simple heading-based segmentation for resumes
+        headings = [
+            ("HEADER", ["name", "email", "phone", "linkedin", "github"]),
+            ("SUMMARY", ["summary", "objective", "profile"]),
+            ("EXPERIENCE", ["experience", "employment", "work history"]),
+            ("PROJECTS", ["projects", "project"]),
+            ("EDUCATION", ["education", "degree", "university"]),
+            ("SKILLS", ["skills", "technologies", "tools"]),
+            ("ADDITIONAL", ["certifications", "awards", "volunteer", "leadership", "activities"]),
+        ]
+
+        current_section = {"id": "FULL_RESUME", "title": "Full Resume", "start_line": 1, "end_line": n or 1, "type": "resume"}
+        detected = []
+        lower_lines = [l.lower() for l in lines_raw]
+
+        for sec_id, keywords in headings:
+            for i, l in enumerate(lower_lines):
+                if any(re.search(rf"\\b{kw}\\b", l) for kw in keywords):
+                    detected.append({"id": sec_id, "title": sec_id.title().replace("_", " "), "start_line": i + 1})
+                    break
+
+        detected_sorted = sorted({d["id"]: d for d in detected}.values(), key=lambda x: x["start_line"])
+        if detected_sorted:
+            for i, sec in enumerate(detected_sorted):
+                start = sec["start_line"]
+                end = (detected_sorted[i + 1]["start_line"] - 1) if i + 1 < len(detected_sorted) else (n or start)
+                sections.append({"id": sec["id"], "title": sec["title"], "start_line": start, "end_line": end, "type": "resume"})
+        else:
+            sections.append(current_section)
+    else:
+        # SOP / Personal statement: approximate into ordered narrative sections
+        ordered = [
+            ("INTRODUCTION", "Introduction"),
+            ("ACADEMIC_BACKGROUND", "Academic Background"),
+            ("EXPERIENCE_AND_PROJECTS", "Experience and Projects"),
+            ("WHY_THIS_PROGRAM", "Why This Program"),
+            ("WHY_THIS_UNIVERSITY", "Why This University"),
+            ("CAREER_GOALS", "Career Goals"),
+            ("CONCLUSION", "Conclusion"),
+        ]
+
+        if n == 0:
+            sections.append({"id": "FULL_SOP", "title": "Full Statement", "start_line": 1, "end_line": 1, "type": "sop"})
+        else:
+            # Divide lines into contiguous blocks following the above order
+            block_size = max(1, n // len(ordered))
+            start = 1
+            for i, (sec_id, title) in enumerate(ordered):
+                if i == len(ordered) - 1:
+                    end = n
+                else:
+                    end = min(n, start + block_size - 1)
+                sections.append({"id": sec_id, "title": title, "start_line": start, "end_line": end, "type": "sop"})
+                start = end + 1
+                if start > n:
+                    break
+
+    return {"lines": lines, "sections": sections}
+
 def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_report,
                           context, program_fit, uni_name, prog_name, ats_report=None):
     if doc_type == "RESUME":
@@ -415,6 +490,8 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         "top_issues":             [i["message"] for i in grammar_report["issues"][:10]]
     }
 
+    scaffold = build_analysis_scaffold(corrected, doc_type)
+
     prompt = (
         f"You are an admissions reviewer and writing coach.\n"
         f"Return ONLY valid JSON. No markdown. No triple backticks.\n"
@@ -425,39 +502,212 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         f"PROGRAM_FIT:\n{json.dumps(program_fit, ensure_ascii=False)}\n"
         f"FORMAT_REPORT:\n{json.dumps(format_report, ensure_ascii=False)}\n"
         f"GRAMMAR_REPORT:\n{json.dumps(grammar_summary, ensure_ascii=False)}\n"
+        f"ANALYSIS_SCAFFOLD:\n{json.dumps(scaffold, ensure_ascii=False)}\n"
         f"{ats_block}"
         f"DOCUMENT:\n{corrected[:12000]}\n\n"
-        "Return JSON with keys: doc_type, overall_score (0-100), overall_quality_label, "
-        "program_specificity (target_university, target_program, fit_score, missing_keywords_to_add, where_to_add_keywords), "
-        "format_and_sections (is_correct_format, missing_sections, section_checks), "
-        "grammar (score, top_issues), clarity (score, issues), tone (summary, is_appropriate, issues), "
-        "relevance_to_selected_program (score, issues, what_to_add_based_on_context), "
-        "strengths (array), weaknesses (array), "
-        "sentence_level_improvements (array of {original, improved, why}), "
-        'rewrite_output ({"improved_document": ""}), '
-        "action_plan_next_revision (array)"
+        "Return ONLY valid JSON with the following structure (no markdown, no comments):\n"
+        "{\n"
+        '  \"doc_type\": \"SOP\" | \"RESUME\",\n'
+        "  \"overall_score\": number (0-100),\n"
+        "  \"overall_quality_label\": string,\n"
+        "  \"program_specificity\": {\n"
+        "    \"target_university\": string,\n"
+        "    \"target_program\": string,\n"
+        "    \"fit_score\": number,\n"
+        "    \"missing_keywords_to_add\": [string],\n"
+        "    \"where_to_add_keywords\": [string],\n"
+        "    \"keyword_placement_suggestions\": [\n"
+        "      {\"keyword\": string, \"section\": string, \"suggested_sentence_or_fragment\": string}\n"
+        "    ],\n"
+        "    \"mismatch_notes\": [string]\n"
+        "  },\n"
+        "  \"format_and_sections\": {\n"
+        "    \"is_correct_format\": boolean,\n"
+        "    \"missing_sections\": [string],\n"
+        "    \"section_checks\": object\n"
+        "  },\n"
+        "  \"grammar\": {\"score\": number, \"issue_count\": number, \"top_issues\": [string]},\n"
+        "  \"clarity\": {\"score\": number, \"issues\": [string]},\n"
+        "  \"tone\": {\"summary\": string, \"is_appropriate\": boolean, \"issues\": [string]},\n"
+        "  \"relevance_to_selected_program\": {\n"
+        "    \"score\": number,\n"
+        "    \"issues\": [string],\n"
+        "    \"what_to_add_based_on_context\": [string]\n"
+        "  },\n"
+        "  \"strengths\": [string],\n"
+        "  \"weaknesses\": [string],\n"
+        "  \"line_issues\": [\n"
+        "    {\n"
+        "      \"line_number\": number,\n"
+        "      \"issue_type\": \"grammar\" | \"clarity\" | \"tone\" | \"weak_content\" | \"repetition\" | \"structure\" | \"program_mismatch\",\n"
+        "      \"severity\": \"critical\" | \"important\" | \"minor\",\n"
+        "      \"original_line\": string,\n"
+        "      \"improved_line\": string,\n"
+        "      \"explanation\": string\n"
+        "    }\n"
+        "  ],\n"
+        "  \"sentence_level_improvements\": [\n"
+        "    {\n"
+        "      \"section\": string,\n"
+        "      \"original_sentence\": string,\n"
+        "      \"improved_sentence\": string,\n"
+        "      \"issue_type\": string,\n"
+        "      \"severity\": string,\n"
+        "      \"explanation\": string\n"
+        "    }\n"
+        "  ],\n"
+        "  \"section_analysis\": {\n"
+        "    \"SECTION_ID\": {\n"
+        "      \"title\": string,\n"
+        "      \"what_is_good\": [string],\n"
+        "      \"what_is_missing\": [string],\n"
+        "      \"what_to_improve\": [string]\n"
+        "    }\n"
+        "  },\n"
+        "  \"resume_bullet_analysis\": [\n"
+        "    {\n"
+        "      \"section\": string,\n"
+        "      \"bullet_text\": string,\n"
+        "      \"has_action_verb\": boolean,\n"
+        "      \"action_verb\": string | null,\n"
+        "      \"has_metric\": boolean,\n"
+        "      \"metric_example\": string | null,\n"
+        "      \"program_relevance_score\": number,\n"
+        "      \"issues\": [string],\n"
+        "      \"improved_bullet\": string\n"
+        "    }\n"
+        "  ],\n"
+        "  \"rewrite_output\": {\"improved_document\": string},\n"
+        "  \"action_plan_next_revision\": [\n"
+        "    {\"item\": string, \"priority\": \"high\" | \"medium\" | \"low\"}\n"
+        "  ]\n"
+        "}\n"
+        "Rules:\n"
+        "- Do NOT give generic advice; every issue must refer to the actual text and, when possible, a specific line or section.\n"
+        "- Use the ANALYSIS_SCAFFOLD line numbers and sections when populating line_issues and section_analysis.\n"
+        "- Tailor feedback to the TARGET UNIVERSITY and TARGET PROGRAM using PROGRAM_FIT and the provided context.\n"
+        "- For resumes, analyze each bullet individually for action verbs, metrics, and program relevance.\n"
+        "- Do not invent facts; if information is missing, suggest phrases with [ADD DETAIL] placeholders.\n"
     )
 
     out = ask_llm_json(prompt, max_tokens=3200, temperature=0.0)
 
     if isinstance(out, dict) and "error" not in out:
-        out.setdefault("format_and_sections", {})
-        out["format_and_sections"]["is_correct_format"] = format_report["is_correct_format"]
-        out["format_and_sections"]["missing_sections"]  = format_report["missing_sections"]
-        out["format_and_sections"]["section_checks"]    = format_report["section_checks"]
+        # Ensure section/format info is always present and aligned with our own checks
+        fmt_section = out.setdefault("format_and_sections", {})
+        fmt_section["is_correct_format"] = format_report["is_correct_format"]
+        fmt_section["missing_sections"]  = format_report["missing_sections"]
+        fmt_section["section_checks"]    = format_report["section_checks"]
 
-        out.setdefault("program_specificity", {})
-        out["program_specificity"]["target_university"]       = uni_name
-        out["program_specificity"]["target_program"]          = prog_name
-        out["program_specificity"]["fit_score"]               = program_fit.get("program_fit_score", 0)
-        out["program_specificity"]["missing_keywords_to_add"] = program_fit.get("missing_keywords", [])[:12]
+        # Program specificity defaults and alignment
+        prog_spec = out.setdefault("program_specificity", {})
+        prog_spec["target_university"]       = uni_name
+        prog_spec["target_program"]          = prog_name
+        prog_spec["fit_score"]               = program_fit.get("program_fit_score", 0)
+        prog_spec.setdefault("missing_keywords_to_add", program_fit.get("missing_keywords", [])[:12])
+        prog_spec.setdefault("where_to_add_keywords", [])
+        prog_spec.setdefault("keyword_placement_suggestions", [])
+        prog_spec.setdefault("mismatch_notes", [])
 
-        out.setdefault("grammar", {})
-        out["grammar"]["score"]       = grammar_report["grammar_quality_score"]
-        out["grammar"]["issue_count"] = grammar_report["count"]
+        # Grammar defaults
+        gram = out.setdefault("grammar", {})
+        gram["score"]       = grammar_report["grammar_quality_score"]
+        gram["issue_count"] = grammar_report["count"]
+        gram.setdefault("top_issues", grammar_summary["top_issues"])
 
+        # Line issues normalization
+        allowed_issue_types = {"grammar", "clarity", "tone", "weak_content", "repetition", "structure", "program_mismatch"}
+        allowed_severity    = {"critical", "important", "minor"}
+        line_issues = out.get("line_issues") or []
+        normalized_line_issues = []
+        if isinstance(line_issues, list):
+            for li in line_issues:
+                if not isinstance(li, dict):
+                    continue
+                ln = int(li.get("line_number", 0)) or 0
+                if ln <= 0:
+                    continue
+                itype = str(li.get("issue_type", "clarity")).lower()
+                if itype not in allowed_issue_types:
+                    itype = "clarity"
+                sev = str(li.get("severity", "minor")).lower()
+                if sev not in allowed_severity:
+                    sev = "minor"
+                normalized_line_issues.append({
+                    "line_number": ln,
+                    "issue_type": itype,
+                    "severity": sev,
+                    "original_line": li.get("original_line", ""),
+                    "improved_line": li.get("improved_line", ""),
+                    "explanation": li.get("explanation", "")
+                })
+        out["line_issues"] = normalized_line_issues
+
+        # Section analysis normalization
+        section_analysis = out.get("section_analysis") or {}
+        if isinstance(section_analysis, list):
+            converted = {}
+            for entry in section_analysis:
+                if isinstance(entry, dict):
+                    key = entry.get("id") or entry.get("title") or f"section_{len(converted)+1}"
+                    converted[str(key)] = {
+                        "title": entry.get("title", str(key)),
+                        "what_is_good": entry.get("what_is_good", []),
+                        "what_is_missing": entry.get("what_is_missing", []),
+                        "what_to_improve": entry.get("what_to_improve", []),
+                    }
+            section_analysis = converted
+        elif isinstance(section_analysis, dict):
+            # ensure each value has the expected keys
+            for k, v in list(section_analysis.items()):
+                if not isinstance(v, dict):
+                    section_analysis[k] = {
+                        "title": str(k),
+                        "what_is_good": [],
+                        "what_is_missing": [],
+                        "what_to_improve": [],
+                    }
+                else:
+                    v.setdefault("title", str(k))
+                    v.setdefault("what_is_good", [])
+                    v.setdefault("what_is_missing", [])
+                    v.setdefault("what_to_improve", [])
+        else:
+            section_analysis = {}
+        out["section_analysis"] = section_analysis
+
+        # Sentence-level improvements default
+        sli = out.get("sentence_level_improvements")
+        if not isinstance(sli, list):
+            out["sentence_level_improvements"] = []
+
+        # Resume bullet analysis default
+        if doc_type == "RESUME":
+            rba = out.get("resume_bullet_analysis")
+            if not isinstance(rba, list):
+                out["resume_bullet_analysis"] = []
+        else:
+            out["resume_bullet_analysis"] = []
+
+        # Action plan normalization: allow both plain strings and objects
+        ap = out.get("action_plan_next_revision") or []
+        normalized_ap = []
+        if isinstance(ap, list):
+            for item in ap:
+                if isinstance(item, str):
+                    normalized_ap.append({"item": item, "priority": "high"})
+                elif isinstance(item, dict):
+                    txt = item.get("item") or item.get("text") or ""
+                    pr  = str(item.get("priority", "high")).lower()
+                    if pr not in {"high", "medium", "low"}:
+                        pr = "high"
+                    if txt:
+                        normalized_ap.append({"item": txt, "priority": pr})
+        out["action_plan_next_revision"] = normalized_ap
+
+        # Derive quality label if missing
         score = out.get("overall_score", 0)
-        out["overall_quality_label"] = (
+        out["overall_quality_label"] = out.get("overall_quality_label") or (
             "Exceptional" if score >= 85 else
             "Strong"      if score >= 70 else
             "Average"     if score >= 50 else
