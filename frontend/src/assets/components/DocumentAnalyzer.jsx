@@ -10,6 +10,12 @@ export default function DocumentAnalyzer() {
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
   const [result, setResult]             = useState(null);
+  const [expanded, setExpanded]         = useState({
+    lineIssues: true,
+    sectionInsights: true,
+    programAlignment: true,
+    resumeBullets: true,
+  });
   const fileInputRef                    = useRef(null);
 
   const handleFileChange = (e) => {
@@ -46,12 +52,32 @@ export default function DocumentAnalyzer() {
   const label          = result?.evaluation?.overall_quality_label ?? "";
   const strengths      = result?.evaluation?.strengths  ?? [];
   const weaknesses     = result?.evaluation?.weaknesses ?? [];
-  const rewrite        = result?.evaluation?.rewrite_output?.improved_document ?? "";
   const atsScore       = result?.ats_score?.ats_score;
   const grammarScore   = result?.grammar?.grammar_quality_score;
+  const grammarIssueCount = result?.grammar?.count ?? 0;
   const missingKws     = result?.evaluation?.program_specificity?.missing_keywords_to_add ?? [];
   const actionPlan     = result?.evaluation?.action_plan_next_revision ?? [];
-  const lineIssues     = result?.evaluation?.line_issues ?? [];
+  const rawLineIssues  = result?.evaluation?.line_issues;
+  const lineIssues     = Array.isArray(rawLineIssues)
+    ? rawLineIssues
+    : rawLineIssues && typeof rawLineIssues === "object"
+    ? [rawLineIssues]
+    : [];
+
+  const normalizeWs = (s) =>
+    String(s || "")
+      .trim()
+      .replace(/\s+/g, " ");
+  /** Case-insensitive: hide only true no-ops (same text, ignoring case). */
+  const displayLineIssues = lineIssues.filter((li) => {
+    const o = normalizeWs(li?.original_line);
+    const i = normalizeWs(li?.improved_line);
+    return o && i && o.toLowerCase() !== i.toLowerCase();
+  });
+  const sanitizeUi = (s) =>
+    String(s || "")
+      .replace(/\[ADD DETAIL\]/gi, "a specific measurable outcome (e.g., % improvement, users impacted)")
+      .replace(/\[ADD\s+METRIC\]/gi, "a number or percentage");
   const sectionAnalysis = result?.evaluation?.section_analysis ?? {};
   const sentenceImprovements =
     result?.evaluation?.sentence_level_improvements ?? [];
@@ -62,6 +88,97 @@ export default function DocumentAnalyzer() {
   const resumeBullets =
     result?.evaluation?.resume_bullet_analysis ?? [];
   const docType = result?.classification?.doc_type;
+
+  const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value || 0)));
+  /** Aligned with backend: grammar score tracks visible line-issue count */
+  const displayedGrammarScore = clampScore(grammarScore ?? 0);
+  const qualityProxy = clampScore(score);
+  const atsProxy = typeof atsScore === "number" ? clampScore(atsScore) : qualityProxy;
+  const displayedOverallScore = clampScore(
+    displayedGrammarScore * 0.35 + atsProxy * 0.25 + qualityProxy * 0.4
+  );
+
+  const scoreToneClass = (value) =>
+    value <= 50 ? "da-score-red" : value <= 75 ? "da-score-yellow" : "da-score-green";
+
+  const renderProgress = (title, value, subtitle) => (
+    <div className="da-progress-card">
+      <div className="da-progress-head">
+        <p className="da-tag-label">{title}</p>
+        <span className="da-progress-value">{value}%</span>
+      </div>
+      <div className="da-progress-track">
+        <div
+          className={`da-progress-fill ${scoreToneClass(value)}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+      {subtitle && <p className="da-muted">{subtitle}</p>}
+    </div>
+  );
+
+  const toggleCard = (key) => {
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const visibleItems = (items, isExpanded) =>
+    isExpanded ? items : items.slice(0, 2);
+
+  const handleDownloadActionPlan = () => {
+    if (!result) return;
+    const lines = [];
+    lines.push("Document Analyzer - Improvement Plan");
+    lines.push(`University: ${university}`);
+    lines.push(`Program: ${program}`);
+    lines.push("");
+    lines.push(`Overall Score: ${displayedOverallScore}% (${label || "N/A"})`);
+    lines.push(`Grammar Score: ${displayedGrammarScore}%`);
+    if (typeof atsScore === "number") lines.push(`ATS Score: ${clampScore(atsScore)}%`);
+    lines.push("");
+
+    lines.push("Top Strengths:");
+    (strengths.length ? strengths : ["No strengths listed"]).forEach((s) => lines.push(`- ${s}`));
+    lines.push("");
+
+    lines.push("Top Weaknesses:");
+    (weaknesses.length ? weaknesses : ["No weaknesses listed"]).forEach((w) => lines.push(`- ${w}`));
+    lines.push("");
+
+    lines.push("Prioritized Action Plan:");
+    (Array.isArray(actionPlan) && actionPlan.length ? actionPlan : ["No action plan listed"]).forEach((a) => {
+      const text = typeof a === "string" ? a : `${a.item || ""} ${a.priority ? `(${a.priority})` : ""}`;
+      lines.push(`- ${text}`);
+    });
+    lines.push("");
+
+    lines.push("Line-by-line Issues:");
+    (displayLineIssues.length ? displayLineIssues : [{ line_number: "-", issue_type: "none", original_line: "No issues listed", improved_line: "", explanation: "" }]).forEach((li) => {
+      lines.push(`- Line ${li.line_number} [${li.issue_type || "issue"}]`);
+      if (li.original_line) lines.push(`  Original: ${li.original_line}`);
+      if (li.improved_line) lines.push(`  Suggested: ${li.improved_line}`);
+      if (li.explanation) lines.push(`  Why: ${li.explanation}`);
+    });
+    lines.push("");
+
+    lines.push("Section Insights:");
+    Object.entries(sectionAnalysis).forEach(([key, sec]) => {
+      lines.push(`- ${sec?.title || key}`);
+      (sec?.what_is_good || []).forEach((x) => lines.push(`  Good: ${x}`));
+      (sec?.what_is_missing || []).forEach((x) => lines.push(`  Missing: ${x}`));
+      (sec?.what_to_improve || []).forEach((x) => lines.push(`  Improve: ${x}`));
+    });
+    lines.push("");
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `document-analyzer-action-plan-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="da-container">
@@ -148,28 +265,38 @@ export default function DocumentAnalyzer() {
 
         {/* RIGHT SIDE — RESULTS */}
         <div className="da-results">
-          {/* OVERVIEW CARD */}
-          <div className="da-section-card">
+          <div className="da-section-card da-overview-card">
             <h3 className="da-section-header">Overall Overview</h3>
-            <div className="da-overview-row">
-              <div className="da-overview-metric">
-                <p className="da-tag-label">Quality Score</p>
-                <div className="da-score-box">
-                  {result ? `${score}% — ${label}` : "0%"}
-                </div>
-              </div>
-              {result && grammarScore !== undefined && (
-                <div className="da-overview-metric">
-                  <p className="da-tag-label">Grammar</p>
-                  <div className="da-score-box">{grammarScore}%</div>
-                </div>
-              )}
-              {result && atsScore !== undefined && (
-                <div className="da-overview-metric">
-                  <p className="da-tag-label">ATS (Resume)</p>
-                  <div className="da-score-box">{atsScore}%</div>
+            <div className="da-overview-row da-overview-stack">
+              {result && (
+                <div className="da-score-row">
+                  <div className="da-score-box da-score-compact">
+                    {`${displayedOverallScore}% — ${label || "—"}`}
+                  </div>
+                  <div className="da-score-box da-score-compact">
+                    {`Grammar ${displayedGrammarScore}%`}
+                  </div>
+                  {typeof atsScore === "number" && (
+                    <div className="da-score-box da-score-compact">
+                      {`ATS ${clampScore(atsScore)}%`}
+                    </div>
+                  )}
                 </div>
               )}
+              {renderProgress(
+                "Quality Score",
+                result ? displayedOverallScore : 0,
+                result ? label : ""
+              )}
+              {result &&
+                renderProgress(
+                  "Grammar Score",
+                  displayedGrammarScore,
+                  `${grammarIssueCount} issue(s) — matches score`
+                )}
+              {result &&
+                typeof atsScore === "number" &&
+                renderProgress("ATS Score", clampScore(atsScore), "Resume ATS readiness")}
             </div>
 
             <div className="da-overview-lists">
@@ -202,14 +329,25 @@ export default function DocumentAnalyzer() {
 
           {/* LINE-BY-LINE ISSUES CARD */}
           <div className="da-section-card">
-            <h3 className="da-section-header">Line-by-line Issues</h3>
+            <button
+              className="da-accordion-header"
+              onClick={() => toggleCard("lineIssues")}
+            >
+              <h3 className="da-section-header">
+                Line-by-line Issues
+                {result ? (
+                  <span className="da-count-badge">{grammarIssueCount}</span>
+                ) : null}
+              </h3>
+              <span>{expanded.lineIssues ? "Hide" : "Show"}</span>
+            </button>
             {!result && <p className="da-muted">Run an analysis to see issues.</p>}
-            {result && lineIssues.length === 0 && (
-              <p className="da-muted">No significant line-level issues detected.</p>
+            {result && expanded.lineIssues && displayLineIssues.length === 0 && (
+              <p className="da-muted">No substantive line-level edits needed — your text looks strong here.</p>
             )}
-            {result && lineIssues.length > 0 && (
+            {result && expanded.lineIssues && displayLineIssues.length > 0 && (
               <div className="da-line-issue-list">
-                {lineIssues
+                {displayLineIssues
                   .slice()
                   .sort((a, b) => {
                     const sevOrder = { critical: 0, important: 1, minor: 2 };
@@ -226,7 +364,7 @@ export default function DocumentAnalyzer() {
                         </span>
                         {li.issue_type && (
                           <span className="da-tag da-tag-type">
-                            {li.issue_type.replace("_", " ")}
+                            {(li.issue_type || "").replace(/_/g, " ")}
                           </span>
                         )}
                         {li.severity && (
@@ -246,14 +384,16 @@ export default function DocumentAnalyzer() {
                             {li.original_line}
                           </p>
                         )}
-                        {li.improved_line && (
+                        {li.improved_line &&
+                          normalizeWs(li.original_line).toLowerCase() !==
+                            normalizeWs(li.improved_line).toLowerCase() && (
                           <p className="da-line-improved">
                             <span className="da-inline-label">Suggested:</span>{" "}
-                            {li.improved_line}
+                            {sanitizeUi(li.improved_line)}
                           </p>
                         )}
                         {li.explanation && (
-                          <p className="da-line-explanation">{li.explanation}</p>
+                          <p className="da-line-explanation">{sanitizeUi(li.explanation)}</p>
                         )}
                       </div>
                     </div>
@@ -264,9 +404,15 @@ export default function DocumentAnalyzer() {
 
           {/* SENTENCE & SECTION ANALYSIS CARD */}
           <div className="da-section-card">
-            <h3 className="da-section-header">Sentence &amp; Section Insights</h3>
+            <button
+              className="da-accordion-header"
+              onClick={() => toggleCard("sectionInsights")}
+            >
+              <h3 className="da-section-header">Sentence &amp; Section Insights</h3>
+              <span>{expanded.sectionInsights ? "Hide" : "Show"}</span>
+            </button>
             {!result && <p className="da-muted">Run an analysis to see insights.</p>}
-            {result && (
+            {result && expanded.sectionInsights && (
               <div className="da-section-columns">
                 <div className="da-section-column">
                   <p className="da-tag-label">Sentence-level Improvements</p>
@@ -274,7 +420,10 @@ export default function DocumentAnalyzer() {
                     <p className="da-muted">No specific sentence issues highlighted.</p>
                   ) : (
                     <div className="da-small-scroll">
-                      {sentenceImprovements.map((s, i) => (
+                      {visibleItems(
+                        sentenceImprovements,
+                        expanded.sectionInsights
+                      ).map((s, i) => (
                         <div key={i} className="da-sentence-item">
                           {s.section && (
                             <p className="da-sentence-section">{s.section}</p>
@@ -288,11 +437,11 @@ export default function DocumentAnalyzer() {
                           {s.improved_sentence && (
                             <p className="da-line-improved">
                               <span className="da-inline-label">Suggested:</span>{" "}
-                              {s.improved_sentence}
+                              {sanitizeUi(s.improved_sentence)}
                             </p>
                           )}
                           {s.explanation && (
-                            <p className="da-line-explanation">{s.explanation}</p>
+                            <p className="da-line-explanation">{sanitizeUi(s.explanation)}</p>
                           )}
                         </div>
                       ))}
@@ -306,7 +455,10 @@ export default function DocumentAnalyzer() {
                     <p className="da-muted">No section-level feedback available.</p>
                   ) : (
                     <div className="da-small-scroll">
-                      {Object.entries(sectionAnalysis).map(([key, sec]) => (
+                      {visibleItems(
+                        Object.entries(sectionAnalysis),
+                        expanded.sectionInsights
+                      ).map(([key, sec]) => (
                         <div key={key} className="da-section-block">
                           <h4 className="da-section-block-title">
                             {sec.title || key}
@@ -362,9 +514,15 @@ export default function DocumentAnalyzer() {
 
           {/* PROGRAM ALIGNMENT CARD */}
           <div className="da-section-card">
-            <h3 className="da-section-header">Program Alignment</h3>
+            <button
+              className="da-accordion-header"
+              onClick={() => toggleCard("programAlignment")}
+            >
+              <h3 className="da-section-header">Program Alignment</h3>
+              <span>{expanded.programAlignment ? "Hide" : "Show"}</span>
+            </button>
             {!result && <p className="da-muted">Run an analysis to see alignment.</p>}
-            {result && (
+            {result && expanded.programAlignment && (
               <>
                 <p className="da-tag-label">Missing / Recommended Keywords</p>
                 {missingKws.length === 0 ? (
@@ -375,14 +533,16 @@ export default function DocumentAnalyzer() {
 
                 {keywordPlacement.length > 0 && (
                   <div className="da-small-scroll" style={{ marginTop: 10 }}>
-                    {keywordPlacement.map((kp, i) => (
+                    {visibleItems(
+                      keywordPlacement,
+                      expanded.programAlignment
+                    ).map((kp, i) => (
                       <div key={i} className="da-keyword-placement-item">
                         <span className="da-tag da-tag-type">
                           {kp.section || "Section"}
                         </span>
                         <p>
-                          Add <strong>{kp.keyword}</strong> like:{" "}
-                          {kp.suggested_sentence_or_fragment}
+                          Add <strong>{kp.keyword}</strong> — {sanitizeUi(kp.suggested_sentence_or_fragment)}
                         </p>
                       </div>
                     ))}
@@ -393,7 +553,10 @@ export default function DocumentAnalyzer() {
                   <div style={{ marginTop: 12 }}>
                     <p className="da-tag-label">Document–Program Mismatches</p>
                     <ul>
-                      {mismatchNotes.map((m, i) => (
+                      {visibleItems(
+                        mismatchNotes,
+                        expanded.programAlignment
+                      ).map((m, i) => (
                         <li key={i}>{m}</li>
                       ))}
                     </ul>
@@ -406,7 +569,13 @@ export default function DocumentAnalyzer() {
           {/* RESUME BULLETS CARD (RESUME ONLY) */}
           {docType === "RESUME" && (
             <div className="da-section-card">
-              <h3 className="da-section-header">Resume Bullet Review</h3>
+              <button
+                className="da-accordion-header"
+                onClick={() => toggleCard("resumeBullets")}
+              >
+                <h3 className="da-section-header">Resume Bullet Review</h3>
+                <span>{expanded.resumeBullets ? "Hide" : "Show"}</span>
+              </button>
               {!result && (
                 <p className="da-muted">Upload a resume to see bullet feedback.</p>
               )}
@@ -418,7 +587,8 @@ export default function DocumentAnalyzer() {
               )}
               {result && resumeBullets.length > 0 && (
                 <div className="da-small-scroll">
-                  {resumeBullets.map((b, i) => (
+                  {visibleItems(resumeBullets, expanded.resumeBullets).map(
+                    (b, i) => (
                     <div key={i} className="da-bullet-item">
                       <div className="da-line-issue-meta">
                         {b.section && (
@@ -443,7 +613,7 @@ export default function DocumentAnalyzer() {
                       {b.improved_bullet && (
                         <p className="da-line-improved">
                           <span className="da-inline-label">Suggested:</span>{" "}
-                          {b.improved_bullet}
+                          {sanitizeUi(b.improved_bullet)}
                         </p>
                       )}
                       {Array.isArray(b.issues) && b.issues.length > 0 && (
@@ -455,14 +625,28 @@ export default function DocumentAnalyzer() {
                       )}
                     </div>
                   ))}
+                  {!expanded.resumeBullets && resumeBullets.length > 2 && (
+                    <p className="da-muted">
+                      Showing 2 bullets. Click Show to expand full review.
+                    </p>
+                  )}
                 </div>
               )}
+              <div className="da-resume-example">
+                <p className="da-mini-heading">Example improvement</p>
+                <p className="da-line-original">
+                  <span className="da-inline-label">Instead of:</span> Built a web app
+                </p>
+                <p className="da-line-improved">
+                  <span className="da-inline-label">Try:</span> Developed a scalable web application using React and Node.js that improved performance by 30%
+                </p>
+              </div>
             </div>
           )}
 
-          {/* ACTION PLAN + FULL REWRITE CARD */}
+          {/* ACTION PLAN CARD */}
           <div className="da-section-card">
-            <h3 className="da-section-header">Action Plan &amp; Improved Draft</h3>
+            <h3 className="da-section-header">Action Plan</h3>
             {!result && <p className="da-muted">Run an analysis to see suggestions.</p>}
             {result && (
               <>
@@ -482,19 +666,9 @@ export default function DocumentAnalyzer() {
                 ) : (
                   <p className="da-muted">No explicit action plan was generated.</p>
                 )}
-
-                {rewrite && (
-                  <>
-                    <p className="da-tag-label" style={{ marginTop: 10 }}>
-                      Improved Document (AI Rewrite)
-                    </p>
-                    <textarea
-                      className="da-feedback-box da-rewrite-box"
-                      readOnly
-                      value={rewrite}
-                    />
-                  </>
-                )}
+                <button className="da-download-btn" onClick={handleDownloadActionPlan}>
+                  Download Full Action Plan
+                </button>
               </>
             )}
           </div>
