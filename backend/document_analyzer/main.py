@@ -52,6 +52,43 @@ ACTION_VERBS = [
     "coordinated","executed","launched","engineered","refactored","deployed","integrated"
 ]
 
+TECHNICAL_TERMS = {
+    "FastAPI", "WhisperX", "LangChain", "Prisma", "FAISS", "NaSCon", "ICAP", "IBA",
+    "WordPress", "PostgreSQL", "PyTorch", "CLIP", "WebRTC", "Firebase", "Puppeteer",
+    "Tailwind", "TypeScript", "JavaScript", "Django", "React", "Node.js", "MySQL",
+    "LLMs", "Tetris", "tetrominoes", "KAIRO", "Kairo", "TeachTrack", "Bootcamp",
+}
+TECHNICAL_TERMS_LOWER = {t.lower() for t in TECHNICAL_TERMS}
+
+COMMON_CAPITALIZED_WORDS = {
+    "a", "an", "and", "as", "at", "but", "by", "for", "from", "if", "in", "into",
+    "is", "it", "of", "on", "or", "the", "to", "with", "i",
+    "january", "february", "march", "april", "may", "june", "july", "august",
+    "september", "october", "november", "december",
+}
+
+INFORMAL_WORD_REPLACEMENTS = {
+    "stuff": "work",
+    "things": "details",
+    "a lot of": "many",
+    "lots of": "many",
+    "really": "",
+    "very": "",
+    "pretty": "",
+    "got": "received",
+    "gonna": "going to",
+    "wanna": "want to",
+    "kinda": "somewhat",
+    "sort of": "somewhat",
+}
+
+ARTICLE_NOUNS = (
+    "student", "developer", "engineer", "intern", "assistant", "researcher",
+    "candidate", "graduate", "undergraduate", "officer", "member", "leader",
+    "application", "app", "system", "platform", "tool", "model", "database",
+    "dashboard", "website", "api", "project", "course", "program",
+)
+
 # ── GLOBAL STATE (loaded once at startup) ───────────────────────
 _state = {
     "client":     None,
@@ -268,6 +305,124 @@ def _lt_rule_id(m) -> str:
     return str(getattr(m, "rule_id", None) or getattr(m, "ruleId", "") or "")
 
 
+def _lt_category(m) -> str:
+    cat = getattr(m, "category", "") or ""
+    return str(getattr(cat, "name", cat) or "")
+
+
+def _clean_word_token(token: str) -> str:
+    return re.sub(r"^[^A-Za-z0-9+#.]+|[^A-Za-z0-9+#.]+$", "", token or "")
+
+
+def _is_protected_term_token(token: str) -> bool:
+    clean = _clean_word_token(token)
+    if not clean:
+        return False
+    if clean.lower() in TECHNICAL_TERMS_LOWER:
+        return True
+    if any(t.lower() == clean.lower() for t in TECHNICAL_TERMS):
+        return True
+    if re.search(r"[A-Za-z]\d|\d[A-Za-z]", clean):
+        return True
+    if clean.isupper() and len(clean) >= 2:
+        return True
+    if re.search(r"[a-z][A-Z]|[A-Z][a-z]+[A-Z]", clean):
+        return True
+    if clean[0].isupper() and clean.lower() not in COMMON_CAPITALIZED_WORDS:
+        return True
+    return False
+
+
+def _is_protected_term_text(text: str) -> bool:
+    clean = _clean_word_token(text)
+    return bool(clean and _is_protected_term_token(clean))
+
+
+def _line_has_protected_term_changed(original: str, improved: str) -> bool:
+    if not original or not improved:
+        return False
+    protected = [
+        t for t in re.findall(r"\b[A-Za-z][A-Za-z0-9+#.]*\b", original)
+        if _is_protected_term_token(t)
+    ]
+    for token in protected:
+        if token not in improved:
+            return True
+    return False
+
+
+def _is_spelling_match(m) -> bool:
+    rid = _lt_rule_id(m).upper()
+    category = _lt_category(m).upper()
+    msg = (getattr(m, "message", "") or "").lower()
+    return (
+        "SPELL" in rid
+        or "MORFOLOGIK" in rid
+        or "HUNSPELL" in rid
+        or "TYPOS" in category
+        or "spelling" in msg
+    )
+
+
+def _edit_distance(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        cur = [i]
+        for j, cb in enumerate(b, start=1):
+            cur.append(min(
+                prev[j] + 1,
+                cur[j - 1] + 1,
+                prev[j - 1] + (0 if ca == cb else 1),
+            ))
+        prev = cur
+    return prev[-1]
+
+
+def _spelling_suggestion_high_confidence(original: str, replacement: str) -> bool:
+    src = _clean_word_token(original)
+    rep = _clean_word_token(replacement)
+    if not src or not rep:
+        return False
+    if _is_protected_term_token(src) or _is_protected_term_token(rep):
+        return False
+    if not re.fullmatch(r"[a-z]+", src) or not re.fullmatch(r"[a-z]+", rep):
+        return False
+    if src[0] != rep[0]:
+        return False
+    dist = _edit_distance(src, rep)
+    limit = 1 if len(src) <= 7 else 2
+    return dist <= limit
+
+
+def _should_keep_spelling_match(m, matched_text: str) -> bool:
+    if _is_protected_term_text(matched_text):
+        return False
+    reps = getattr(m, "replacements", []) or []
+    if len(reps) != 1:
+        return False
+    rep = _first_replacement_str(reps)
+    return _spelling_suggestion_high_confidence(matched_text, rep)
+
+
+def _classify_lt_issue(m) -> str:
+    rid = _lt_rule_id(m).upper()
+    category = _lt_category(m).upper()
+    msg = (getattr(m, "message", "") or "").lower()
+    if "PUNCT" in rid or "TYPOGRAPHY" in category or "dash" in msg or "hyphen" in msg:
+        return "formatting"
+    if "CASING" in rid or "CASE" in rid or "uppercase" in msg or "lowercase" in msg:
+        return "formatting"
+    if "STYLE" in category or "READABILITY" in category or "wordy" in msg or "simpl" in msg:
+        return "clarity"
+    return "grammar"
+
+
 def _should_skip_lt_match(m, text: str) -> bool:
     """
     Drop noisy LanguageTool findings that are not useful for admissions documents:
@@ -291,7 +446,8 @@ def _should_skip_lt_match(m, text: str) -> bool:
 def _find_protected_spans(text: str):
     """
     Protect personal identifiers from auto-correction to avoid damaging
-    user-provided facts like names or contact information.
+    user-provided facts like names, contact information, tools, acronyms,
+    and proper nouns.
     """
     spans = []
 
@@ -326,6 +482,15 @@ def _find_protected_spans(text: str):
         if not _looks_like_address(phrase) and len(phrase.split()) <= 4:
             spans.append((m.start(), m.end()))
 
+    # Exact technical/product terms and acronym/camel-case/proper-noun tokens.
+    for term in sorted(TECHNICAL_TERMS, key=len, reverse=True):
+        pattern = r"(?<![A-Za-z0-9])" + re.escape(term) + r"(?![A-Za-z0-9])"
+        for m in re.finditer(pattern, text):
+            spans.append((m.start(), m.end()))
+    for m in re.finditer(r"\b[A-Za-z][A-Za-z0-9+#.]*\b", text):
+        if _is_protected_term_token(m.group(0)):
+            spans.append((m.start(), m.end()))
+
     return spans
 
 
@@ -338,6 +503,9 @@ def _overlaps_protected(start: int, end: int, spans):
 
 def _extract_protected_values(text: str):
     values = set()
+    for term in TECHNICAL_TERMS:
+        if re.search(r"(?<![A-Za-z0-9])" + re.escape(term) + r"(?![A-Za-z0-9])", text):
+            values.add(term)
     for m in re.finditer(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text):
         values.add(m.group(0))
     for m in re.finditer(r"(?:(?:\+?\d{1,3}[\s\-]?)?(?:\(?\d{2,4}\)?[\s\-]?)?\d{3,4}[\s\-]?\d{3,4})", text):
@@ -352,6 +520,10 @@ def _extract_protected_values(text: str):
         phrase = m.group(0)
         if not _looks_like_address(phrase):
             values.add(phrase)
+    for m in re.finditer(r"\b[A-Za-z][A-Za-z0-9+#.]*\b", text):
+        token = m.group(0)
+        if _is_protected_term_token(token):
+            values.add(token)
     return sorted(values, key=len, reverse=True)
 
 
@@ -405,12 +577,182 @@ def _sanitize_placeholder_text(s: str) -> str:
     return s
 
 
+def _grammar_score_from_count(issue_count: int) -> int:
+    """
+    Keep the score tied visibly to issue volume. Bad drafts should fall fast;
+    clean drafts should not be punished much for one or two minor findings.
+    """
+    n = max(0, int(issue_count or 0))
+    if n <= 2:
+        return max(0, 100 - n * 5)
+    if n <= 10:
+        return max(0, 90 - (n - 2) * 5)
+    return max(0, 50 - (n - 10) * 3)
+
+
+def _article_for_word(word: str) -> str:
+    return "an" if re.match(r"(?i)[aeiou]", word or "") else "a"
+
+
+def _is_real_sentence_line(stripped: str) -> bool:
+    if not stripped or _looks_like_section_heading(stripped):
+        return False
+    if _looks_like_name_only_line(stripped) or _looks_like_contact_header_line(stripped):
+        return False
+    if re.match(r"^(https?://|www\.|[\w.%+-]+@)", stripped, re.I):
+        return False
+    if len(stripped.split()) < 4:
+        return False
+    return bool(re.search(r"[.!?]$", stripped) or re.search(r"\b(is|are|am|was|were|have|has|had|built|developed|worked|created|designed|implemented|led|managed|did|made)\b", stripped, re.I))
+
+
+def _make_heuristic_issue(line_no: int, issue_type: str, severity: str, original: str, improved: str, explanation: str, rule_id: str) -> dict:
+    return {
+        "message": explanation,
+        "context": original,
+        "replacements": [improved],
+        "offset": 0,
+        "error_length": len(original),
+        "line_number": line_no,
+        "original_line": original,
+        "issue_type": issue_type,
+        "severity": severity,
+        "snippet": original,
+        "source": "heuristic",
+        "rule_id": rule_id,
+    }
+
+
+def _detect_lowercase_sentence_starts(line_no: int, line: str) -> list:
+    stripped = line.strip()
+    if not _is_real_sentence_line(stripped):
+        return []
+    issues = []
+    first_alpha = re.search(r"[A-Za-z]", line)
+    if first_alpha and line[first_alpha.start()].islower():
+        improved = line[:first_alpha.start()] + line[first_alpha.start()].upper() + line[first_alpha.start() + 1:]
+        issues.append(_make_heuristic_issue(
+            line_no, "grammar", "minor", line, improved,
+            "Sentence starts should be capitalized. Section headings are ignored for this check.",
+            "HEURISTIC_LOWERCASE_SENTENCE_START",
+        ))
+    for m in re.finditer(r"([.!?]\s+)([a-z])", line):
+        improved = line[:m.start(2)] + line[m.start(2)].upper() + line[m.start(2) + 1:]
+        issues.append(_make_heuristic_issue(
+            line_no, "grammar", "minor", line, improved,
+            "A new sentence appears to start with a lowercase letter.",
+            "HEURISTIC_LOWERCASE_SENTENCE_START",
+        ))
+    return issues
+
+
+def _detect_informal_words(line_no: int, line: str) -> list:
+    if _looks_like_section_heading(line.strip()) or _looks_like_contact_header_line(line.strip()):
+        return []
+    issues = []
+    for informal, replacement in INFORMAL_WORD_REPLACEMENTS.items():
+        pattern = r"\b" + re.escape(informal) + r"\b"
+        m = re.search(pattern, line, re.I)
+        if not m:
+            continue
+        if replacement:
+            improved = line[:m.start()] + replacement + line[m.end():]
+            improved = re.sub(r"\s{2,}", " ", improved).strip()
+        else:
+            improved = (line[:m.start()] + line[m.end():]).replace("  ", " ").strip()
+        issues.append(_make_heuristic_issue(
+            line_no, "grammar", "minor", line, improved,
+            f"'{m.group(0)}' is informal; use more precise academic or resume wording.",
+            "HEURISTIC_INFORMAL_WORD",
+        ))
+    return issues
+
+
+def _detect_missing_articles(line_no: int, line: str) -> list:
+    if _looks_like_section_heading(line.strip()) or _looks_like_contact_header_line(line.strip()):
+        return []
+    issues = []
+    noun_pattern = "|".join(re.escape(n) for n in ARTICLE_NOUNS)
+    be_pattern = re.compile(
+        rf"\b(am|is|are|was|were|be|been|being|became|become)\s+((?!(?:a|an|the|my|our|your|their|this|that)\b)(?:[a-z][a-z+-]*\s+){{0,4}})({noun_pattern})\b",
+        re.I,
+    )
+    action_pattern = re.compile(
+        rf"\b(built|developed|created|designed|implemented|made|launched|trained|deployed)\s+((?!(?:a|an|the|my|our|your|their|this|that)\b)(?:[a-z][a-z+-]*\s+){{0,3}})({noun_pattern})\b",
+        re.I,
+    )
+    for pattern in (be_pattern, action_pattern):
+        m = pattern.search(line)
+        if not m:
+            continue
+        phrase_start = m.start(2)
+        phrase = (m.group(2) or "") + (m.group(3) or "")
+        first_word = (phrase.split() or [m.group(3)])[0]
+        article = _article_for_word(first_word)
+        improved = line[:phrase_start] + article + " " + line[phrase_start:]
+        if _normalize_ws(improved).lower() == _normalize_ws(line).lower():
+            continue
+        issues.append(_make_heuristic_issue(
+            line_no, "grammar", "important", line, improved,
+            f"Possible missing article before '{phrase.strip()}'.",
+            "HEURISTIC_MISSING_ARTICLE",
+        ))
+    return issues
+
+
+def _detect_weak_sentence_structure(line_no: int, line: str) -> list:
+    stripped = line.strip()
+    if not stripped or _looks_like_section_heading(stripped) or _looks_like_contact_header_line(stripped):
+        return []
+    issues = []
+    words = re.findall(r"[A-Za-z0-9+#.]+", stripped)
+    and_count = len(re.findall(r"\band\b", stripped, re.I))
+    if len(words) >= 42 or and_count >= 4:
+        improved = "Split into two shorter sentences: " + stripped
+        issues.append(_make_heuristic_issue(
+            line_no, "clarity", "important", line, improved,
+            "This sentence is overloaded; split it or make the structure more direct.",
+            "HEURISTIC_WEAK_STRUCTURE_LONG",
+        ))
+    weak_openers = (
+        (r"^\s*worked on\b", "Developed or contributed to"),
+        (r"^\s*responsible for\b", "Led"),
+        (r"^\s*did\b", "Completed"),
+        (r"^\s*made\b", "Built"),
+    )
+    for pattern, replacement in weak_openers:
+        if re.search(pattern, stripped, re.I):
+            improved = re.sub(pattern, replacement, line, count=1, flags=re.I)
+            issues.append(_make_heuristic_issue(
+                line_no, "clarity", "minor", line, improved,
+                "Weak sentence structure; start with a stronger, more specific action.",
+                "HEURISTIC_WEAK_STRUCTURE_OPENING",
+            ))
+            break
+    return issues
+
+
+def _heuristic_grammar_issues(text: str) -> list:
+    issues = []
+    for line_no, _, line in _line_ranges(text):
+        issues.extend(_detect_lowercase_sentence_starts(line_no, line))
+        issues.extend(_detect_missing_articles(line_no, line))
+        issues.extend(_detect_informal_words(line_no, line))
+        issues.extend(_detect_weak_sentence_structure(line_no, line))
+    return _dedupe_line_issues([i for i in issues if not _is_noise_line_issue(i)])
+
+
 def _is_llm_line_issue_junk(li: dict, text: str) -> bool:
     """Drop LLM rows that hallucinate names or boilerplate header rewrites."""
     o = (li.get("original_line") or "").strip()
     imp = (li.get("improved_line") or "").strip()
+    expl = (li.get("explanation") or "").lower()
     low_imp = imp.lower()
     if "name + contact" in low_imp or "name+contact" in low_imp.replace(" ", ""):
+        return True
+    if "possible spelling" in expl:
+        return True
+    if _line_has_protected_term_changed(o, imp):
         return True
     if _looks_like_name_only_line(o) or _looks_like_contact_header_line(o):
         return True
@@ -426,19 +768,23 @@ def _is_llm_line_issue_junk(li: dict, text: str) -> bool:
 def _is_noise_line_issue(li: dict) -> bool:
     """Drop no-op or low-value line issues (duplicate whitespace, name false positives, etc.)."""
     o = (li.get("original_line") or "").strip()
-    i = (li.get("improved_line") or "").strip()
+    i = (li.get("improved_line") or _first_replacement_str(li.get("replacements") or []) or "").strip()
     expl = (li.get("explanation") or "").lower()
     if not o:
         return True
     if not i or o == i:
         return True
-    if _normalize_ws(o).lower() == _normalize_ws(i).lower():
+    if _normalize_ws(o).lower() == _normalize_ws(i).lower() and li.get("rule_id") != "HEURISTIC_LOWERCASE_SENTENCE_START":
         return True
     if _normalize_ws(o) == _normalize_ws(i):
         return True
     if "whitespace" in expl or ("repeated" in expl and "space" in expl):
         return True
     if "two consecutive" in expl and "space" in expl:
+        return True
+    if "possible spelling" in expl:
+        return True
+    if _line_has_protected_term_changed(o, i):
         return True
     if "spelling" in expl and _looks_like_name_only_line(o):
         return True
@@ -479,6 +825,7 @@ def _build_grammar_line_issue(text: str, gi: dict) -> dict:
     rep = _first_replacement_str(reps)
     if not rep:
         return None
+    issue_type = gi.get("issue_type") or "grammar"
     for line_no, start, line in _line_ranges(text):
         line_end = start + len(line)
         if not (start <= offset < line_end):
@@ -494,13 +841,18 @@ def _build_grammar_line_issue(text: str, gi: dict) -> dict:
             return None
         if _normalize_ws(line).lower() == _normalize_ws(new_line).lower():
             return None
+        if _line_has_protected_term_changed(line, new_line):
+            return None
+        explanation = gi.get("message", "Grammar or style suggestion.")
+        if "possible spelling" in explanation.lower():
+            explanation = "High-confidence spelling correction."
         return {
             "line_number": line_no,
-            "issue_type": "grammar",
+            "issue_type": issue_type,
             "severity": "minor",
             "original_line": line,
             "improved_line": _sanitize_placeholder_text(new_line),
-            "explanation": gi.get("message", "Grammar or style suggestion."),
+            "explanation": explanation,
         }
     return None
 
@@ -514,7 +866,8 @@ def _dedupe_line_issues(items):
         key = (
             int(li.get("line_number", 0)),
             _normalize_ws(li.get("original_line", ""))[:80],
-            _normalize_ws(li.get("improved_line", ""))[:80],
+            _normalize_ws(li.get("improved_line", "") or _first_replacement_str(li.get("replacements") or []))[:80],
+            str(li.get("rule_id", "") or li.get("message", "") or li.get("explanation", ""))[:80],
         )
         if key in seen:
             continue
@@ -526,8 +879,19 @@ def _dedupe_line_issues(items):
 def _merge_grammar_line_issues(text: str, grammar_report: dict, llm_issues: list) -> list:
     """Combine LLM line issues with LanguageTool-derived rows (full issue list)."""
     merged = [x for x in llm_issues if isinstance(x, dict)]
-    for gi in grammar_report.get("issues", [])[:60]:
-        row = _build_grammar_line_issue(text, gi)
+    for gi in grammar_report.get("issues", []):
+        if gi.get("source") == "heuristic":
+            row = {
+                "line_number": gi.get("line_number", 0),
+                "issue_type": gi.get("issue_type", "grammar"),
+                "severity": gi.get("severity", "minor"),
+                "original_line": gi.get("original_line", ""),
+                "improved_line": _first_replacement_str(gi.get("replacements") or []),
+                "explanation": gi.get("message", "Grammar or style suggestion."),
+                "rule_id": gi.get("rule_id", ""),
+            }
+        else:
+            row = _build_grammar_line_issue(text, gi)
         if row and not _is_noise_line_issue(row):
             merged.append(row)
     return _dedupe_line_issues(merged)
@@ -571,7 +935,7 @@ def _filter_program_specificity(prog_spec: dict, prog_name: str, uni_name: str, 
     return prog_spec
 
 
-def grammar_check(text, max_issues=50):
+def grammar_check(text, max_issues=None):
     lt = _state["lt_tool"]
     matches = lt.check(text)
     protected_spans = _find_protected_spans(text)
@@ -581,17 +945,20 @@ def grammar_check(text, max_issues=50):
             continue
         m_start = getattr(m, "offset", 0)
         m_end = m_start + _error_len(m)
+        snip = text[m_start:m_end] if 0 <= m_start < len(text) else ""
+        if _is_spelling_match(m) and not _should_keep_spelling_match(m, snip):
+            continue
         if _overlaps_protected(m_start, m_end, protected_spans):
             continue
-        snip = text[m_start:m_end] if 0 <= m_start < len(text) else ""
-        if snip.isupper() and len(snip) >= 4:
+        if _is_protected_term_text(snip):
             # Likely product / project acronyms (KAIRO, etc.)
             continue
         filtered_matches.append(m)
 
     corrected = language_tool_python.utils.correct(text, filtered_matches)
     issues    = []
-    for m in filtered_matches[:max_issues]:
+    lt_issue_rows = filtered_matches if max_issues is None else filtered_matches[:max_issues]
+    for m in lt_issue_rows:
         offset = getattr(m, "offset", 0)
         elen = _error_len(m)
         line_no = _line_no_from_offset(text, offset)
@@ -610,11 +977,16 @@ def grammar_check(text, max_issues=50):
             "error_length": elen,
             "line_number":  line_no,
             "original_line": original_line,
+            "rule_id":      _lt_rule_id(m),
+            "category":     _lt_category(m),
+            "issue_type":   _classify_lt_issue(m),
             "snippet": text[start:end]
         })
-    issue_count           = len(filtered_matches)
-    # Softer penalty: fewer false positives after filtering
-    grammar_quality_score = max(0, 100 - min(issue_count, 40) * 2)
+    heuristic_issues      = _heuristic_grammar_issues(text)
+    issues.extend(heuristic_issues)
+    issues                = _dedupe_line_issues(issues)
+    issue_count           = len(issues)
+    grammar_quality_score = _grammar_score_from_count(issue_count)
     return {
         "count":                 issue_count,
         "grammar_quality_score": grammar_quality_score,
@@ -908,7 +1280,7 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         "  \"line_issues\": [\n"
         "    {\n"
         "      \"line_number\": number,\n"
-        "      \"issue_type\": \"grammar\" | \"clarity\" | \"formatting\" | \"tone\" | \"weak_content\" | \"repetition\" | \"structure\" | \"program_mismatch\",\n"
+        "      \"issue_type\": \"grammar\" | \"clarity\" | \"formatting\" | \"ats\" | \"tone\" | \"weak_content\" | \"repetition\" | \"structure\" | \"program_mismatch\",\n"
         "      \"severity\": \"critical\" | \"important\" | \"minor\",\n"
         "      \"original_line\": string,\n"
         "      \"improved_line\": string,\n"
@@ -954,6 +1326,9 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         "Rules:\n"
         "- Do NOT give generic advice; every issue must refer to the actual text and, when possible, a specific line or section.\n"
         "- NEVER change or \"correct\" person names, emails, phone numbers, or LinkedIn URLs. Never output placeholder headers like NAME + CONTACT.\n"
+        "- NEVER change or \"correct\" technical/product/proper nouns such as FastAPI, WhisperX, LangChain, Prisma, FAISS, NaSCon, ICAP, IBA, WordPress, KAIRO, or any mixed-case/all-caps/capitalized non-standard term.\n"
+        "- Do NOT suggest spelling replacements unless the correction is obvious and high confidence. If unsure, omit the issue.\n"
+        "- Label only true sentence mechanics as grammar. Use clarity for sentence improvement, formatting for spacing/dashes/casing, and ats for missing keywords/metrics/resume targeting.\n"
         "- Section headings (Education, Projects, EXPERIENCE, etc.) are formatting, not grammar; do not flag capitalization-only differences as errors.\n"
         "- Do NOT use bracket placeholders like [ADD DETAIL]; give concrete, actionable wording or say what kind of detail to add (e.g., a measurable metric).\n"
         "- Use the ANALYSIS_SCAFFOLD line numbers and sections when populating line_issues and section_analysis.\n"
@@ -987,7 +1362,7 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
 
         # Line issues normalization + merge with LanguageTool for full coverage
         allowed_issue_types = {
-            "grammar", "clarity", "formatting", "tone", "weak_content",
+            "grammar", "clarity", "formatting", "ats", "tone", "weak_content",
             "repetition", "structure", "program_mismatch",
         }
         allowed_severity    = {"critical", "important", "minor"}
@@ -1006,6 +1381,13 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
                 itype = str(li.get("issue_type", "clarity")).lower()
                 if itype not in allowed_issue_types:
                     itype = "clarity"
+                expl_lower = str(li.get("explanation", "")).lower()
+                if itype in {"weak_content", "program_mismatch", "structure"} and re.search(r"\b(ats|keyword|metric|resume|program|relevance)\b", expl_lower):
+                    itype = "ats"
+                if itype == "grammar" and re.search(r"\b(clear|clarity|simplif|wordy|readability|impact)\b", expl_lower):
+                    itype = "clarity"
+                if itype == "grammar" and re.search(r"\b(spacing|dash|hyphen|case|capitali[sz]ation|format)\b", expl_lower):
+                    itype = "formatting"
                 sev = str(li.get("severity", "minor")).lower()
                 if sev not in allowed_severity:
                     sev = "minor"
@@ -1040,7 +1422,7 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         out["line_issues"] = merged_issues
         vis_count = len(merged_issues)
         gram["issue_count"] = vis_count
-        gram["score"] = max(0, 100 - min(vis_count, 40) * 2)
+        gram["score"] = _grammar_score_from_count(vis_count)
 
         prog_spec = _filter_program_specificity(prog_spec, prog_name, uni_name, program_fit)
 
@@ -1175,7 +1557,7 @@ async def analyze_document(
         n_vis = len(evaluation.get("line_issues", [])) if isinstance(evaluation, dict) else 0
         grammar_out = dict(grammar)
         grammar_out["count"] = n_vis
-        grammar_out["grammar_quality_score"] = max(0, 100 - min(n_vis, 40) * 2)
+        grammar_out["grammar_quality_score"] = _grammar_score_from_count(n_vis)
 
         return JSONResponse({
             "classification": classification,
