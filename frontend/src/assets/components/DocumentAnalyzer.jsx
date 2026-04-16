@@ -54,7 +54,6 @@ export default function DocumentAnalyzer() {
   const weaknesses     = result?.evaluation?.weaknesses ?? [];
   const atsScore       = result?.ats_score?.ats_score;
   const grammarScore   = result?.grammar?.grammar_quality_score;
-  const grammarIssueCount = result?.grammar?.count ?? 0;
   const missingKws     = result?.evaluation?.program_specificity?.missing_keywords_to_add ?? [];
   const actionPlan     = result?.evaluation?.action_plan_next_revision ?? [];
   const rawLineIssues  = result?.evaluation?.line_issues;
@@ -72,8 +71,11 @@ export default function DocumentAnalyzer() {
   const displayLineIssues = lineIssues.filter((li) => {
     const o = normalizeWs(li?.original_line);
     const i = normalizeWs(li?.improved_line);
-    return o && i && o.toLowerCase() !== i.toLowerCase();
+    if (!o) return false;
+    if (li?.rule_id === "HEURISTIC_LOWERCASE_SENTENCE_START") return true;
+    return i && o.toLowerCase() !== i.toLowerCase();
   });
+  const displayedIssueCount = displayLineIssues.length;
   const sanitizeUi = (s) =>
     String(s || "")
       .replace(/\[ADD DETAIL\]/gi, "a specific measurable outcome (e.g., % improvement, users impacted)")
@@ -206,7 +208,7 @@ export default function DocumentAnalyzer() {
       </div>
 
       {/* MAIN LAYOUT */}
-      <div className="da-main">
+      <div className={result ? "da-main da-main-with-results" : "da-main"}>
 
         {/* LEFT SIDE — UPLOAD BOX */}
         <div className="da-upload-box">
@@ -292,7 +294,7 @@ export default function DocumentAnalyzer() {
                 renderProgress(
                   "Grammar Score",
                   displayedGrammarScore,
-                  `${grammarIssueCount} issue(s) — matches score`
+                  `${displayedIssueCount} issue(s) shown`
                 )}
               {result &&
                 typeof atsScore === "number" &&
@@ -328,7 +330,7 @@ export default function DocumentAnalyzer() {
           </div>
 
           {/* LINE-BY-LINE ISSUES CARD */}
-          <div className="da-section-card">
+          <div className="da-section-card da-issues-card">
             <button
               className="da-accordion-header"
               onClick={() => toggleCard("lineIssues")}
@@ -336,7 +338,7 @@ export default function DocumentAnalyzer() {
               <h3 className="da-section-header">
                 Line-by-line Issues
                 {result ? (
-                  <span className="da-count-badge">{grammarIssueCount}</span>
+                  <span className="da-count-badge">{displayedIssueCount}</span>
                 ) : null}
               </h3>
               <span>{expanded.lineIssues ? "Hide" : "Show"}</span>
@@ -385,8 +387,9 @@ export default function DocumentAnalyzer() {
                           </p>
                         )}
                         {li.improved_line &&
-                          normalizeWs(li.original_line).toLowerCase() !==
-                            normalizeWs(li.improved_line).toLowerCase() && (
+                          (li.rule_id === "HEURISTIC_LOWERCASE_SENTENCE_START" ||
+                            normalizeWs(li.original_line).toLowerCase() !==
+                              normalizeWs(li.improved_line).toLowerCase()) && (
                           <p className="da-line-improved">
                             <span className="da-inline-label">Suggested:</span>{" "}
                             {sanitizeUi(li.improved_line)}
@@ -403,7 +406,7 @@ export default function DocumentAnalyzer() {
           </div>
 
           {/* SENTENCE & SECTION ANALYSIS CARD */}
-          <div className="da-section-card">
+          <div className="da-section-card da-insights-card">
             <button
               className="da-accordion-header"
               onClick={() => toggleCard("sectionInsights")}
@@ -513,7 +516,7 @@ export default function DocumentAnalyzer() {
           </div>
 
           {/* PROGRAM ALIGNMENT CARD */}
-          <div className="da-section-card">
+          <div className="da-section-card da-program-card">
             <button
               className="da-accordion-header"
               onClick={() => toggleCard("programAlignment")}
@@ -568,7 +571,7 @@ export default function DocumentAnalyzer() {
 
           {/* RESUME BULLETS CARD (RESUME ONLY) */}
           {docType === "RESUME" && (
-            <div className="da-section-card">
+            <div className="da-section-card da-resume-card">
               <button
                 className="da-accordion-header"
                 onClick={() => toggleCard("resumeBullets")}
@@ -645,7 +648,7 @@ export default function DocumentAnalyzer() {
           )}
 
           {/* ACTION PLAN CARD */}
-          <div className="da-section-card">
+          <div className="da-section-card da-action-card">
             <h3 className="da-section-header">Action Plan</h3>
             {!result && <p className="da-muted">Run an analysis to see suggestions.</p>}
             {result && (
