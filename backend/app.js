@@ -1,8 +1,12 @@
 import express from "express";
 import cors from "cors";
 import { createProxyMiddleware } from "http-proxy-middleware";
+import { createRequire } from "module";
 import userRoutes from "./routes/userRoutes.js";
 import universityRoutes from "./routes/universityRoutes.js";
+
+const require = createRequire(import.meta.url);
+const scholarshipRoutes = require("./scholarships/routes/scholarships.js");
 
 const app = express();
 app.use(cors());
@@ -10,6 +14,7 @@ app.use(express.json());
 
 app.use("/api/users", userRoutes);
 app.use("/api/universities", universityRoutes);
+app.use("/api/scholarships", scholarshipRoutes);
 
 // Proxy document-analyzer calls to Python FastAPI (port 8001)
 app.use(

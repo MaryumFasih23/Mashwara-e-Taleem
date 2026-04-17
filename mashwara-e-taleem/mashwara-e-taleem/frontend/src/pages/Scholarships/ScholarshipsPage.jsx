@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import ScholarshipFilters from "./scholarships/ScholarshipFilters";
-import ScholarshipCard from "./scholarships/ScholarshipCard";
-import "./scholarships/scholarships.css";
+import ScholarshipFilters from "./ScholarshipFilters";
+import ScholarshipCard from "./ScholarshipCard";
+import "./scholarships.css";
 
 const COUNTRIES = ["All", "USA", "UK", "Canada", "Australia", "Qatar", "Germany"];
 const TARGET_COUNTRIES = COUNTRIES.slice(1);
@@ -82,7 +82,7 @@ const fundingValue = (amount = "") => {
   return 0;
 };
 
-export default function Scholarships() {
+const ScholarshipsPage = () => {
   const [scholarships, setScholarships] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("All");
   const [selectedDegree, setSelectedDegree] = useState("All");
@@ -99,7 +99,7 @@ export default function Scholarships() {
       setError("");
 
       try {
-        const response = await fetch("http://localhost:5000/api/scholarships?domain=Computer%20Science");
+        const response = await fetch("/api/scholarships?domain=Computer%20Science");
         const data = await response.json();
 
         if (!response.ok) {
@@ -107,10 +107,8 @@ export default function Scholarships() {
         }
 
         const cleanScholarships = Array.isArray(data.scholarships)
-          ? data.scholarships
-              .map(normalizeScholarship)
-              .filter(isBachelorOrMaster)
-              .filter((scholarship) => TARGET_COUNTRIES.includes(scholarship.country))
+          ? data.scholarships.map(normalizeScholarship).filter(isBachelorOrMaster)
+          .filter((scholarship) => TARGET_COUNTRIES.includes(scholarship.country))
           : [];
 
         if (active) {
@@ -137,7 +135,8 @@ export default function Scholarships() {
 
   const filteredScholarships = useMemo(() => {
     let results = scholarships.filter((scholarship) => {
-      const countryOk = selectedCountry === "All" || scholarship.country === selectedCountry;
+      const countryOk =
+        selectedCountry === "All" || scholarship.country === selectedCountry;
       const degreeOk =
         selectedDegree === "All" ||
         String(scholarship.degreeLevel).toLowerCase().includes(selectedDegree.toLowerCase());
@@ -151,7 +150,9 @@ export default function Scholarships() {
       );
     } else if (sortBy === "Funding") {
       results = [...results].sort(
-        (a, b) => fundingValue(b.amount) - fundingValue(a.amount) || b.score - a.score
+        (a, b) =>
+          fundingValue(b.amount) - fundingValue(a.amount) ||
+          b.score - a.score
       );
     } else {
       results = [...results].sort(
@@ -179,7 +180,9 @@ export default function Scholarships() {
   }, [scholarships]);
 
   return (
-    <div className="scholarships-shell scholarships-shell-dashboard">
+    <div className="scholarships-shell">
+      <Sidebar />
+
       <main className="scholarships-main">
         <header className="page-header">
           <div>
@@ -268,4 +271,46 @@ export default function Scholarships() {
       </main>
     </div>
   );
-}
+};
+
+const Sidebar = () => {
+  const navItems = [
+    "Home",
+    "Universities",
+    "Scholarships",
+    "Document Analyzer",
+    "AI Advisor",
+    "Visa Guidance",
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="brand-panel">
+        <div className="brand-icon">MT</div>
+        <div>
+          <strong>Mashwara-e-Taleem</strong>
+          <span>Scholarship finder</span>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav" aria-label="Main navigation">
+        {navItems.map((item) => (
+          <a
+            href="#"
+            key={item}
+            className={item === "Scholarships" ? "active" : ""}
+          >
+            {item}
+          </a>
+        ))}
+      </nav>
+
+      <nav className="sidebar-nav account-nav" aria-label="Account navigation">
+        <a href="#">Profile</a>
+        <a href="#">Log Out</a>
+      </nav>
+    </aside>
+  );
+};
+
+export default ScholarshipsPage;
