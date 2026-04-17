@@ -8,7 +8,7 @@ const QUICK_QUESTIONS = [
   "Which part of my profile is the weakest?",
 ];
 
-const API_URL = "http://localhost:8002/chat";
+const API_URL = "http://localhost:5000/api/chatbot/chat";
 
 export default function AIAdvisor() {
   const [messages, setMessages] = useState([
