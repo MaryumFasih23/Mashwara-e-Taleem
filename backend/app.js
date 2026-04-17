@@ -12,6 +12,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Mashwar-e-Taleem backend is running",
+    docs: {
+      users: "/api/users",
+      universities: "/api/universities",
+      scholarships: "/api/scholarships",
+      documentAnalyzer: "/api/document-analyzer",
+      chatbot: "/api/chatbot",
+      health: "/health",
+    },
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use("/api/users", userRoutes);
 app.use("/api/universities", universityRoutes);
 app.use("/api/scholarships", scholarshipRoutes);
