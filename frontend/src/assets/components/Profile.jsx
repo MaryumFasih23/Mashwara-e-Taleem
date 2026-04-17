@@ -16,19 +16,16 @@ export default function Profile() {
     phone: "",
     city: "",
     country: "",
-    educationLevel: "Bachelors",
+    educationLevel: "",
     fieldOfStudy: "",
     institution: "",
     graduationYear: "",
     cgpa: "",
     cgpaOutOf: "",
     ielts: "",
-    ieltsBand: "",
     toefl: "",
     duolingo: "",
     greTotal: "",
-    greVerbal: "",
-    greQuant: "",
     gmat: "",
     sat: "",
     act: "",
@@ -47,12 +44,6 @@ export default function Profile() {
     careerGoals: "",
   });
 
-  const [docs, setDocs] = useState({
-    resume: null,
-    personalStatement: null,
-    transcript: null,
-  });
-
   useEffect(() => {
     if (!user) return;
     getUserProfile(user.uid)
@@ -64,19 +55,16 @@ export default function Profile() {
           phone: data.phone || "",
           city: data.city || "",
           country: data.country || "",
-          educationLevel: data.educationLevel || "Bachelors",
+          educationLevel: data.educationLevel || "",
           fieldOfStudy: data.fieldOfStudy || "",
           institution: data.institution || "",
           graduationYear: data.graduationYear || "",
           cgpa: data.cgpa || "",
           cgpaOutOf: data.cgpaOutOf || "",
           ielts: data.ielts || "",
-          ieltsBand: data.ieltsBand || "",
           toefl: data.toefl || "",
           duolingo: data.duolingo || "",
           greTotal: data.greTotal || "",
-          greVerbal: data.greVerbal || "",
-          greQuant: data.greQuant || "",
           gmat: data.gmat || "",
           sat: data.sat || "",
           act: data.act || "",
@@ -106,11 +94,6 @@ export default function Profile() {
     }));
   };
 
-  const handleDocUpload = (e, docKey) => {
-    const file = e.target.files[0];
-    if (file) setDocs((prev) => ({ ...prev, [docKey]: file.name }));
-  };
-
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -130,16 +113,24 @@ export default function Profile() {
     setSaving(false);
   };
 
-  // Derived: what study level is the user targeting?
   const isMastersOrHigher = profile.preferredStudyLevel === "Masters";
   const isBachelors = profile.preferredStudyLevel === "Bachelors";
+
+  const tabs = ["personal", "academic", "preferences", "tests", "financial", "additional"];
+  const tabLabels = {
+    personal: "Personal Info",
+    academic: "Academic",
+    preferences: "Preferences",
+    tests: "Test Scores",
+    financial: "Financial",
+    additional: "Additional",
+  };
 
   return (
     <div className="profile-container">
 
       <h1 className="profile-title">Profile</h1>
 
-      {/* HEADER CARD */}
       <div className="profile-header-card">
         <div className="profile-user-icon">👤</div>
         <div className="profile-info">
@@ -154,25 +145,18 @@ export default function Profile() {
 
       {saveMsg && <p style={{ textAlign: "center", marginTop: "8px" }}>{saveMsg}</p>}
 
-      {/* TABS */}
       <div className="profile-tabs">
-        {["personal", "academic", "tests", "preferences", "financial", "additional"].map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             className={activeTab === tab ? "tab-btn active" : "tab-btn"}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "personal" && "Personal Info"}
-            {tab === "academic" && "Academic"}
-            {tab === "tests" && "Test Scores"}
-            {tab === "preferences" && "Preferences"}
-            {tab === "financial" && "Financial"}
-            {tab === "additional" && "Additional"}
+            {tabLabels[tab]}
           </button>
         ))}
       </div>
 
-      {/* CONTENT CARD */}
       <div className="profile-content-card">
 
         {/* ── PERSONAL INFO ── */}
@@ -219,10 +203,13 @@ export default function Profile() {
             <div className="form-row">
               <div className="form-group">
                 <label>Current Education Level</label>
-                <select name="educationLevel" value={profile.educationLevel} onChange={handleChange}>
-                  <option value="Bachelors">Bachelors</option>
-                  <option value="Masters">Masters</option>
-                </select>
+                <input
+                  name="educationLevel"
+                  value={profile.educationLevel}
+                  onChange={handleChange}
+                  placeholder="e.g. A-Levels, Bachelors, Masters…"
+                />
+                <span className="field-hint">Enter your current or most recent qualification (any system worldwide)</span>
               </div>
               <div className="form-group">
                 <label>Field of Study</label>
@@ -239,14 +226,37 @@ export default function Profile() {
                 <input name="graduationYear" value={profile.graduationYear} onChange={handleChange} placeholder="e.g. 2025" />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── PREFERENCES ── */}
+        {activeTab === "preferences" && (
+          <div>
+            <h2 className="section-title">Study Preferences</h2>
             <div className="form-row">
               <div className="form-group">
-                <label>CGPA</label>
-                <input name="cgpa" value={profile.cgpa} onChange={handleChange} placeholder="e.g. 3.5" />
+                <label>Preferred Study Level</label>
+                <select name="preferredStudyLevel" value={profile.preferredStudyLevel} onChange={handleChange}>
+                  <option value="Bachelors">Bachelors</option>
+                  <option value="Masters">Masters</option>
+                </select>
+                <span className="field-hint">This determines which test scores are shown in the Test Scores tab</span>
               </div>
               <div className="form-group">
-                <label>Out of</label>
-                <input name="cgpaOutOf" value={profile.cgpaOutOf} onChange={handleChange} placeholder="e.g. 4.0" />
+                <label>Preferred Countries</label>
+                <input name="preferredCountries" value={profile.preferredCountries} onChange={handleChange} placeholder="e.g. USA, UK, Germany" />
+                <span className="field-hint">Separate multiple countries with a comma</span>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Preferred Programs</label>
+                <input name="preferredPrograms" value={profile.preferredPrograms} onChange={handleChange} placeholder="e.g. Computer Science, Data Science" />
+              </div>
+              <div className="form-group">
+                <label>Preferred Intake</label>
+                <input name="preferredIntakes" value={profile.preferredIntakes} onChange={handleChange} placeholder="e.g. Fall 2026, Spring 2027" />
+                <span className="field-hint">Separate multiple intakes with a comma</span>
               </div>
             </div>
           </div>
@@ -257,14 +267,13 @@ export default function Profile() {
           <div>
             <h2 className="section-title">Standardized Test Scores</h2>
 
-            {/* Context banner based on preferred study level */}
             <div className="test-context-banner">
               <span className="test-context-icon">🎯</span>
               <div>
                 <strong>
                   {isBachelors
                     ? "You're targeting Bachelors programs"
-                    : "You're targeting Masters / Postgraduate programs"}
+                    : "You're targeting Masters programs"}
                 </strong>
                 <p>
                   {isBachelors
@@ -274,6 +283,26 @@ export default function Profile() {
                 <span className="test-context-hint">
                   You can change your target level in the <strong>Preferences</strong> tab.
                 </span>
+              </div>
+            </div>
+
+            {/* ── CGPA ── */}
+            <div className="test-section-header">
+              <span className="test-section-badge badge-all">All Programs</span>
+              <h3 className="sub-section-title" style={{ margin: 0 }}>GPA / CGPA</h3>
+            </div>
+            <p className="test-section-desc">
+              If your institution uses a GPA or CGPA system, enter it here. Leave blank if you use a percentage, grade, or other grading system.
+            </p>
+            <div className="form-row">
+              <div className="form-group">
+                <label>CGPA</label>
+                <input name="cgpa" value={profile.cgpa} onChange={handleChange} placeholder="e.g. 3.5" />
+              </div>
+              <div className="form-group">
+                <label>Out of</label>
+                <input name="cgpaOutOf" value={profile.cgpaOutOf} onChange={handleChange} placeholder="e.g. 4.0" />
+                <span className="field-hint">Used for eligibility matching across all programs</span>
               </div>
             </div>
 
@@ -299,22 +328,6 @@ export default function Profile() {
               </div>
               <div className="form-group">
                 <label>
-                  IELTS Minimum Band
-                  <span className="score-range">&nbsp;(per section, 0 – 9)</span>
-                </label>
-                <input
-                  name="ieltsBand"
-                  value={profile.ieltsBand}
-                  onChange={handleChange}
-                  placeholder="e.g. 6.5"
-                />
-                <span className="field-hint">Lowest score across Listening, Reading, Writing, Speaking</span>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>
                   TOEFL iBT Score
                   <span className="score-range">&nbsp;(0 – 120)</span>
                 </label>
@@ -325,6 +338,9 @@ export default function Profile() {
                   placeholder="e.g. 100"
                 />
               </div>
+            </div>
+
+            <div className="form-row">
               <div className="form-group">
                 <label>
                   Duolingo English Test
@@ -338,156 +354,91 @@ export default function Profile() {
                 />
                 <span className="field-hint">Accepted by 5,000+ universities worldwide</span>
               </div>
+              <div className="form-group" />
             </div>
 
-            {/* ── UNDERGRADUATE TESTS (Bachelors focus) ── */}
-            <div className={`test-section-header ${isMastersOrHigher ? "test-section-dimmed" : ""}`}>
-              <span className="test-section-badge badge-bachelors">Bachelors</span>
-              <h3 className="sub-section-title" style={{ margin: 0 }}>Undergraduate Admission Tests</h3>
-            </div>
-            <p className="test-section-desc">
-              Required for US undergraduate programs. SAT/ACT are key factors in US university eligibility matching.
-              {isMastersOrHigher && (
-                <span className="test-not-primary"> Not typically required for Masters programs — fill in only if you have scores.</span>
-              )}
-            </p>
+            {/* ── BACHELORS ONLY ── */}
+            {isBachelors && (
+              <>
+                <div className="test-section-header">
+                  <span className="test-section-badge badge-bachelors">Bachelors</span>
+                  <h3 className="sub-section-title" style={{ margin: 0 }}>Undergraduate Admission Tests</h3>
+                </div>
+                <p className="test-section-desc">
+                  Required for US undergraduate programs. SAT/ACT are key factors in US university eligibility matching.
+                </p>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>
+                      SAT Score
+                      <span className="score-range">&nbsp;(400 – 1600)</span>
+                    </label>
+                    <input
+                      name="sat"
+                      value={profile.sat}
+                      onChange={handleChange}
+                      placeholder="e.g. 1450"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>
+                      ACT Score
+                      <span className="score-range">&nbsp;(1 – 36)</span>
+                    </label>
+                    <input
+                      name="act"
+                      value={profile.act}
+                      onChange={handleChange}
+                      placeholder="e.g. 32"
+                    />
+                    <span className="field-hint">If ACT is blank, it will be estimated from your SAT score automatically</span>
+                  </div>
+                </div>
+              </>
+            )}
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>
-                  SAT Score
-                  <span className="score-range">&nbsp;(400 – 1600)</span>
-                </label>
-                <input
-                  name="sat"
-                  value={profile.sat}
-                  onChange={handleChange}
-                  placeholder="e.g. 1450"
-                  className={isMastersOrHigher ? "input-secondary" : ""}
-                />
-              </div>
-              <div className="form-group">
-                <label>
-                  ACT Score
-                  <span className="score-range">&nbsp;(1 – 36)</span>
-                </label>
-                <input
-                  name="act"
-                  value={profile.act}
-                  onChange={handleChange}
-                  placeholder="e.g. 32"
-                  className={isMastersOrHigher ? "input-secondary" : ""}
-                />
-                <span className="field-hint">If ACT is blank, it will be estimated from your SAT score automatically</span>
-              </div>
-            </div>
+            {/* ── MASTERS ONLY ── */}
+            {isMastersOrHigher && (
+              <>
+                <div className="test-section-header">
+                  <span className="test-section-badge badge-masters">Masters</span>
+                  <h3 className="sub-section-title" style={{ margin: 0 }}>Graduate Admission Tests</h3>
+                </div>
+                <p className="test-section-desc">
+                  GRE is required or optional at most Masters programs. GMAT is primarily required for MBA programs.
+                </p>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>
+                      GRE Total Score
+                      <span className="score-range">&nbsp;(260 – 340)</span>
+                    </label>
+                    <input
+                      name="greTotal"
+                      value={profile.greTotal}
+                      onChange={handleChange}
+                      placeholder="e.g. 320"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>
+                      GMAT Score
+                      <span className="score-range">&nbsp;(200 – 800)</span>
+                    </label>
+                    <input
+                      name="gmat"
+                      value={profile.gmat}
+                      onChange={handleChange}
+                      placeholder="e.g. 650"
+                    />
+                    <span className="field-hint">Required for MBA programs at most US universities</span>
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* ── GRADUATE TESTS (Masters focus) ── */}
-            <div className={`test-section-header ${isBachelors ? "test-section-dimmed" : ""}`}>
-              <span className="test-section-badge badge-masters">Masters / PhD</span>
-              <h3 className="sub-section-title" style={{ margin: 0 }}>Graduate Admission Tests</h3>
-            </div>
-            <p className="test-section-desc">
-              GRE is required or optional at most Masters and PhD programs. GMAT is primarily required for MBA programs.
-              {isBachelors && (
-                <span className="test-not-primary"> Not required for Bachelors programs — fill in only if you have scores.</span>
-              )}
-            </p>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>
-                  GRE Total Score
-                  <span className="score-range">&nbsp;(260 – 340)</span>
-                </label>
-                <input
-                  name="greTotal"
-                  value={profile.greTotal}
-                  onChange={handleChange}
-                  placeholder="e.g. 320"
-                  className={isBachelors ? "input-secondary" : ""}
-                />
-              </div>
-              <div className="form-group">
-                <label>
-                  GMAT Score
-                  <span className="score-range">&nbsp;(200 – 800)</span>
-                </label>
-                <input
-                  name="gmat"
-                  value={profile.gmat}
-                  onChange={handleChange}
-                  placeholder="e.g. 650"
-                  className={isBachelors ? "input-secondary" : ""}
-                />
-                <span className="field-hint">Required for MBA programs at most US universities</span>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>
-                  GRE Verbal
-                  <span className="score-range">&nbsp;(130 – 170)</span>
-                </label>
-                <input
-                  name="greVerbal"
-                  value={profile.greVerbal}
-                  onChange={handleChange}
-                  placeholder="e.g. 158"
-                  className={isBachelors ? "input-secondary" : ""}
-                />
-              </div>
-              <div className="form-group">
-                <label>
-                  GRE Quantitative
-                  <span className="score-range">&nbsp;(130 – 170)</span>
-                </label>
-                <input
-                  name="greQuant"
-                  value={profile.greQuant}
-                  onChange={handleChange}
-                  placeholder="e.g. 162"
-                  className={isBachelors ? "input-secondary" : ""}
-                />
-              </div>
-            </div>
-
-            {/* TIP BOX */}
             <div className="profile-test-note">
-              💡 <strong>Tip:</strong> Only fill in tests you have actually taken. Blank fields are handled automatically by the eligibility engine. All scores are saved regardless of your target level.
-            </div>
-          </div>
-        )}
-
-        {/* ── PREFERENCES ── */}
-        {activeTab === "preferences" && (
-          <div>
-            <h2 className="section-title">Study Preferences</h2>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Preferred Study Level</label>
-                <select name="preferredStudyLevel" value={profile.preferredStudyLevel} onChange={handleChange}>
-                  <option value="Bachelors">Bachelors</option>
-                  <option value="Masters">Masters</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Preferred Countries</label>
-                <input name="preferredCountries" value={profile.preferredCountries} onChange={handleChange} placeholder="e.g. USA, UK, Germany" />
-                <span className="field-hint">Separate multiple countries with a comma</span>
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Preferred Programs</label>
-                <input name="preferredPrograms" value={profile.preferredPrograms} onChange={handleChange} placeholder="e.g. Computer Science, Data Science" />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Preferred Intake</label>
-              <input name="preferredIntakes" value={profile.preferredIntakes} onChange={handleChange} placeholder="e.g. Fall 2026, Spring 2027" />
-              <span className="field-hint">Separate multiple intakes with a comma</span>
+              💡 <strong>Tip:</strong> Only fill in tests you have actually taken. Blank fields are handled automatically by the eligibility engine.
             </div>
           </div>
         )}
@@ -561,29 +512,6 @@ export default function Profile() {
               onChange={handleChange}
               placeholder="e.g. Pursue research in Artificial Intelligence and contribute to open-source AI"
             />
-
-            <h3 className="sub-section-title">Documents</h3>
-            <div className="doc-upload-row">
-              {[
-                { key: "resume", label: "Resume / CV" },
-                { key: "personalStatement", label: "Personal Statement" },
-                { key: "transcript", label: "Transcript" },
-              ].map(({ key, label }) => (
-                <div className="doc-upload-item" key={key}>
-                  <span>{label}</span>
-                  <label className="doc-upload-btn">
-                    {docs[key] ? "Change File" : "Upload"}
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      style={{ display: "none" }}
-                      onChange={(e) => handleDocUpload(e, key)}
-                    />
-                  </label>
-                  {docs[key] && <span className="doc-status uploaded">✅ {docs[key]}</span>}
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
