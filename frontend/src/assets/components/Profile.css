@@ -2,18 +2,19 @@
    PROFILE PAGE
    =============================== */
 
-:root {
+.profile-container {
   --mint-bg: #b7d8c8;
-  --peach-box: #e3c4b8;
+  --peach-box: #d8efe7;
   --teal-box: #c7e2d3;
-  --coral-title: #c9543a;
+  --section-ink: #17323b;
+  --section-body: #3f5b65;
 
-  --deep-green: #587f70;
+  --deep-green: #2a7f78;
   --tag-green: #8db39a;
   --upload-green: #7fae8b;
 
-  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.28);
-  --shadow-soft: 0 3px 8px rgba(0, 0, 0, 0.18);
+  --shadow-heavy: 0 14px 28px rgba(23, 50, 59, 0.1);
+  --shadow-soft: 0 6px 14px rgba(23, 50, 59, 0.07);
 
   --radius-card: 18px;
   --radius-inner: 12px;
@@ -30,7 +31,7 @@
 .profile-title {
   text-align: center;
   font-size: 34px;
-  color: var(--coral-title);
+  color: var(--deep-green);
   font-weight: 700;
   margin-bottom: 20px;
 }
@@ -40,9 +41,11 @@
   width: 80%;
   margin: 0 auto 25px auto;
   padding: 22px;
-  background: var(--peach-box);
-  border-radius: var(--radius-card);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23,50,59,0.11);
   box-shadow: var(--shadow-heavy);
+  border-radius: 20px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 25px;
@@ -61,8 +64,8 @@
 .profile-save-btn {
   margin-left: auto;
   padding: 10px 20px;
-  border-radius: var(--radius-inner);
-  background: #d28f85;
+  border-radius: 999px;
+  background: #2a7f78;
   border: none;
   color: white;
   cursor: pointer;
@@ -84,13 +87,13 @@
 }
 
 .tab-btn {
-  background: #d6e8dd;
+  background: #eef7f3;
   padding: 10px 20px;
   border-radius: var(--radius-inner);
   font-weight: 600;
   cursor: pointer;
-  border: none;
-  color: #3a4a45;
+  border: 1px solid rgba(23,50,59,0.1);
+  color: #3f5b65;
   transition: 0.2s;
 }
 
@@ -110,7 +113,8 @@
   width: 85%;
   margin: 0 auto 40px auto;
   padding: 25px;
-  background: var(--teal-box);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23,50,59,0.11);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-heavy);
 }

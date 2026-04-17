@@ -37,13 +37,8 @@ const ScholarshipCard = ({ scholarship }) => {
       </div>
 
       <div className="scholarship-info">
-        <div className="card-topline">
-          <div>
-            <p className="provider">{scholarship.provider || "Unknown provider"}</p>
-            <h3>{scholarship.title}</h3>
-          </div>
-          <span className="score-badge">{scholarship.score || 0}/10</span>
-        </div>
+        <p className="provider">{scholarship.provider || "Unknown provider"}</p>
+        <h3>{scholarship.title}</h3>
 
         <p className="description">
           {scholarship.description || "Scholarship details are available from the official source."}
@@ -74,10 +69,17 @@ const ScholarshipCard = ({ scholarship }) => {
         </div>
       </div>
 
-      <div className="card-action">
+      <div className="card-side">
+        <span className="score-badge">{scholarship.score || 0}/10</span>
+        <span className={isFullyFunded ? "funding-pill full" : "funding-pill"}>
+          {isFullyFunded ? "Fully Funded" : scholarship.amount || "Funding"}
+        </span>
+
+        <div className="card-action">
         <a href={link} target="_blank" rel="noreferrer">
           Apply
         </a>
+        </div>
       </div>
     </article>
   );

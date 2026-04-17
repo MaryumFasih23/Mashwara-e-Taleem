@@ -2,12 +2,81 @@
   width: 100%;
   max-width: 1480px;
   margin: 0 auto;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23, 50, 59, 0.11);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 14px 28px rgba(23,50,59,0.1);
+}
+
+.da-hero {
+  border-radius: 22px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  background:
+    radial-gradient(circle at 10% 18%, rgba(42, 127, 120, 0.2), transparent 35%),
+    radial-gradient(circle at 92% 84%, rgba(20, 120, 110, 0.18), transparent 37%),
+    linear-gradient(180deg, #f0faf5 0%, #e4f4ed 100%);
+  border: 1px solid rgba(23, 50, 59, 0.12);
+  box-shadow: 0 16px 36px rgba(23, 50, 59, 0.08);
+  margin-bottom: 18px;
+}
+
+.da-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2a7f78;
+}
+
+.da-hero-copy h1 {
+  margin: 8px 0;
+  font-size: clamp(27px, 4.2vw, 40px);
+  line-height: 1.06;
+  color: #17323b;
+}
+
+.da-hero-copy p {
+  margin: 0;
+  color: #3f5b65;
+  line-height: 1.7;
+}
+
+.da-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.da-stat-card {
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid rgba(23, 50, 59, 0.1);
+  background: linear-gradient(135deg, rgba(42, 127, 120, 0.1), rgba(20, 120, 110, 0.12));
+}
+
+.da-stat-card strong {
+  display: block;
+  font-size: 25px;
+  line-height: 1;
+  color: #17323b;
+}
+
+.da-stat-card span {
+  display: block;
+  margin-top: 7px;
+  color: #3f5b65;
+  font-size: 14px;
 }
 
 .da-title {
   text-align: center;
   font-size: 30px;
-  color: #b55239;
+  color: #2a7f78;
   font-weight: 700;
   margin-bottom: 5px;
 }
@@ -56,17 +125,19 @@
 
 /* LEFT: UPLOAD BOX */
 .da-upload-box {
-  background: #c7e2d3;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23, 50, 59, 0.11);
   padding: 22px;
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  border-radius: 20px;
+  box-shadow: 0 14px 28px rgba(23, 50, 59, 0.07);
   position: sticky;
   top: 24px;
   align-self: start;
 }
 
 .da-upload-area {
-  border: 2px dashed #5a7f70;
+  border: 2px dashed #6aa69f;
+  background: #f8fcfb;
   padding: 40px 20px;
   border-radius: 15px;
   text-align: center;
@@ -81,7 +152,8 @@
   padding: 10px 20px;
   border-radius: 20px;
   border: none;
-  background: #e3c4b8;
+  background: #eef7f3;
+  border: 1px solid rgba(23, 50, 59, 0.1);
   font-weight: 600;
   cursor: pointer;
 }
@@ -333,11 +405,53 @@
   padding: 11px 20px;
   border-radius: 20px;
   border: none;
-  background: #5f8677;
+  background: #2a7f78;
   color: white;
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
+}
+
+.da-home-progress-wrap {
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.da-home-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.da-home-progress-bar {
+  width: 100%;
+  height: 13px;
+  border-radius: 999px;
+  background: #e5e1d8;
+  overflow: hidden;
+}
+
+.da-home-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2a7f78, #15b89f);
+  border-radius: inherit;
+  transition: width 420ms ease;
+}
+
+@media (max-width: 980px) {
+  .da-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .da-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .da-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .da-submit:disabled {
@@ -353,8 +467,8 @@
   font-weight: 600;
   margin-right: 6px;
   margin-bottom: 4px;
-  background: #e3c4b8;
-  color: #3b2b25;
+  background: #c6e0d4;
+  color: #0c3e38;
 }
 
 .da-tag-line {

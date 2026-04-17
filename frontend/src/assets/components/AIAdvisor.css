@@ -5,6 +5,11 @@
   flex-direction: column;
   height: calc(100vh - 60px);
   max-height: 900px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 20px;
+  border: 1px solid rgba(23, 50, 59, 0.11);
+  box-shadow: 0 14px 28px rgba(23,50,59,0.1);
+  padding: 16px;
 }
 
 .ai-title {
@@ -59,7 +64,7 @@
 .ai-chat-window {
   flex: 1;
   overflow-y: auto;
-  background: #f4faf9;
+  background: linear-gradient(180deg, #f8fcfb, #edf7f3);
   border: 1.5px solid var(--teal-100, #d7f2f0);
   border-radius: 16px;
   padding: 18px 16px;
@@ -68,6 +73,7 @@
   gap: 14px;
   margin-bottom: 14px;
   scroll-behavior: smooth;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
 }
 
 /* ── Bubble rows ─────────────────────────────── */

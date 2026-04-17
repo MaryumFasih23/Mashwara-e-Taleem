@@ -3,47 +3,76 @@ import { Outlet } from "react-router-dom";
 
 import "./DashboardLayout.css";
 import { NavLink } from "react-router-dom";
+import {
+  LuHouse,
+  LuUniversity,
+  LuBadgeDollarSign,
+  LuFileSearch,
+  LuBot,
+  LuFileCheck,
+  LuUser,
+  LuLogOut,
+} from "react-icons/lu";
 import logo from "../logo.png";
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout() {
+  const navItems = [
+    { to: "/dashboard", label: "Home", icon: LuHouse, end: true },
+    { to: "/dashboard/universities", label: "Universities", icon: LuUniversity },
+    { to: "/dashboard/scholarships", label: "Scholarships", icon: LuBadgeDollarSign },
+    { to: "/dashboard/analyzer", label: "Document Analyzer", icon: LuFileSearch },
+    { to: "/dashboard/ai-advisor", label: "AI Advisor", icon: LuBot },
+    { to: "/dashboard/visa-guidance", label: "Visa Guidance", icon: LuFileCheck },
+  ];
+
   return (
     <div className="dash-wrapper">
-
       {/* SIDEBAR */}
       <aside className="dash-sidebar">
         <div className="dash-logo-box">
           <img src={logo} alt="logo" />
-          <h3>Mashwara-e-Taleem</h3>
+          <h3 className="dash-logo-title">Mashwara-e-Taleem</h3>
         </div>
 
         <nav className="dash-nav">
-<NavLink to="/dashboard" end className="dash-link">Home</NavLink>
+          {navItems.map((item) => {
+            const Icon = item.icon;
 
-          <NavLink to="/dashboard/universities" className="dash-link">Universities</NavLink>
-          <NavLink to="/dashboard/scholarships" className="dash-link">Scholarships</NavLink>
-          <NavLink to="/dashboard/analyzer" className="dash-link">Document Analyzer</NavLink>
-          <NavLink to="/dashboard/ai-advisor" className="dash-link">AI Advisor</NavLink>
-          <NavLink to="/dashboard/visa-guidance" className="dash-link">Visa Guidance</NavLink>
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `dash-link ${isActive ? "active" : ""}`.trim()}
+              >
+                <Icon className="dash-link-icon" strokeWidth={1.9} aria-hidden="true" />
+                <span className="dash-link-label">{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="dash-bottom-links">
-          <NavLink to="/dashboard/profile" className="dash-link">Profile</NavLink>
-          <NavLink to="/login" className="dash-link logout">Log Out</NavLink>
+          <NavLink
+            to="/dashboard/profile"
+            className={({ isActive }) => `dash-link ${isActive ? "active" : ""}`.trim()}
+          >
+            <LuUser className="dash-link-icon" strokeWidth={1.9} aria-hidden="true" />
+            <span className="dash-link-label">Profile</span>
+          </NavLink>
+          <NavLink to="/login" className="dash-link logout">
+            <LuLogOut className="dash-link-icon" strokeWidth={1.9} aria-hidden="true" />
+            <span className="dash-link-label">Log Out</span>
+          </NavLink>
         </div>
       </aside>
 
       {/* MAIN CONTENT AREA */}
       <main className="dash-main">
-        <header className="dash-topbar">
-          <span className="dash-topbar-title">Mashwara-e-Taleem</span>
-        </header>
-
-<div className="dash-content">
-  <Outlet />
-</div>
-
+        <div className="dash-content">
+          <Outlet />
+        </div>
       </main>
-
     </div>
   );
 }

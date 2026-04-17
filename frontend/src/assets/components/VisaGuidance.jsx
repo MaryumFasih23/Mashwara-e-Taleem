@@ -151,8 +151,34 @@ export default function VisaGuidance() {
   const [selected, setSelected] = useState("US");
   const visa = VISA_DATA[selected];
 
+  const heroStats = [
+    { label: "Steps", value: visa.steps.length },
+    { label: "Documents", value: visa.requirements.length },
+    { label: "Processing", value: visa.processingTime },
+    { label: "Visa Fee", value: visa.fee },
+  ];
+
   return (
     <div className="visa-container">
+      <section className="visa-hero">
+        <div className="visa-hero-copy">
+          <p className="visa-kicker">Dashboard Journey</p>
+          <h1>Plan your student visa journey</h1>
+          <p>
+            Compare country-specific visa pathways, review mandatory documents, and follow a clear
+            step-by-step process from acceptance to approval.
+          </p>
+        </div>
+        <div className="visa-stats-grid">
+          {heroStats.map((item, index) => (
+            <article key={item.label} className="visa-stat-card" style={{ animationDelay: `${index * 80}ms` }}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <h1 className="visa-title">Visa Guidance</h1>
       <p className="visa-subtitle">
         Select a country below to view student visa requirements and step-by-step guidance.
@@ -200,9 +226,12 @@ export default function VisaGuidance() {
           {/* Steps */}
           <div className="visa-section">
             <h3 className="visa-section-title">Step-by-Step Process</h3>
-            <ol className="visa-steps">
+            <ol className="visa-steps visa-steps-cards">
               {visa.steps.map((step, i) => (
-                <li key={i} className="visa-step-item">{step}</li>
+                <li key={i} className="visa-step-item visa-step-card">
+                  <span className="visa-step-badge">Step {i + 1}</span>
+                  <p>{step}</p>
+                </li>
               ))}
             </ol>
           </div>

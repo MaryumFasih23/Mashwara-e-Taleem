@@ -1,4 +1,4 @@
-:root{
+.su {
   /* harmonized with your login page */
   --page: #a9c6be;
   --bar: #0a5a55;
@@ -18,11 +18,10 @@
 
   --google: #e9f2ef;
   --error: #d95757;
+  min-height: 100vh;
 }
 
 *{box-sizing:border-box}
-html,body,#root{height:100%}
-body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--body)}
 .auth-header {
   background: var(--bar);
   color: #eaf6f5;
@@ -72,6 +71,7 @@ body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto
     width: 36px;
     height: 36px;
   }
+
   .auth-title {
     font-size: 0.98rem;
   }
@@ -87,6 +87,7 @@ body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto
 .su-shell{
   width:100%;max-width:1220px;margin:38px auto 48px;padding:0 28px;
   display:grid;grid-template-columns:1fr 1.05fr;gap:42px;align-items:center;
+  position: relative;
 }
 
 /* art */
@@ -98,8 +99,9 @@ body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto
   position:relative;
   border-radius:22px;
   padding:44px 40px 30px;
-  background:linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,.2)), var(--card-bg);
+  background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.5)), var(--card-bg);
   border:1px solid var(--card-border);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.16);
 }
 .su-card::before{
   /* left-side cast shadow (opposite of login page) */

@@ -215,6 +215,28 @@ export default function Universities() {
   const pageStartIndex = filteredResults.length === 0 ? 0 : (currentPage - 1) * RESULTS_PER_PAGE + 1;
   const pageEndIndex = Math.min(currentPage * RESULTS_PER_PAGE, filteredResults.length);
 
+  const topMatchPercent = useMemo(() => {
+    if (filteredResults.length === 0) return 0;
+    const best = Math.max(...filteredResults.map((item) => Number(item.eligibility_probability || 0)));
+    return Math.round(best * 100);
+  }, [filteredResults]);
+
+  const avgTuition = useMemo(() => {
+    if (filteredResults.length === 0) return 0;
+    const tuitionValues = filteredResults
+      .map((item) => Number(item.tuition_usd || 0))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (tuitionValues.length === 0) return 0;
+    return Math.round(tuitionValues.reduce((sum, value) => sum + value, 0) / tuitionValues.length);
+  }, [filteredResults]);
+
+  const heroStats = [
+    { label: "Universities", value: loading ? "..." : filteredResults.length },
+    { label: "Top Match", value: `${topMatchPercent}%` },
+    { label: "Countries", value: countryOptions.length },
+    { label: "Avg Tuition", value: avgTuition > 0 ? `$${avgTuition.toLocaleString()}` : "N/A" },
+  ];
+
   const handleCountryToggle = (country) => {
     setSelectedCountries((previous) => {
       if (previous.includes(country)) {
@@ -277,7 +299,24 @@ export default function Universities() {
 
   return (
     <div className="uni-container">
-      {/* <h1 className="uni-title">Universities</h1> */}
+      <section className="uni-hero">
+        <div className="uni-hero-copy">
+          <p className="uni-kicker">Dashboard Journey</p>
+          <h1>Discover your top universities</h1>
+          <p>
+            Review ranked university matches, compare tuition and requirements, then open program-level
+            eligibility for each institution.
+          </p>
+        </div>
+        <div className="uni-stats-grid">
+          {heroStats.map((item, index) => (
+            <article key={item.label} className="uni-stat-card" style={{ animationDelay: `${index * 80}ms` }}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
 
       {selectedUniversity ? (
         <div className="uni-programs-view">
@@ -401,7 +440,7 @@ export default function Universities() {
           </div>
 
           <div className="uni-list">
-            <div className="uni-sort">
+            <div className="uni-list-meta">
               <span>
                 {loading
                   ? "Loading recommendations..."
@@ -432,7 +471,7 @@ export default function Universities() {
             {!loading &&
               !error &&
               paginatedResults.map((uni) => (
-                <div
+                <article
                   className="uni-card uni-card-clickable"
                   key={`${uni.university}-${uni.country}-${uni.url || "no-url"}`}
                   onClick={() => openPrograms(uni)}
@@ -468,25 +507,27 @@ export default function Universities() {
                         Min IELTS: <span className="red">{Number(uni.min_ielts || 0).toFixed(1)}</span>
                       </p>
                     )}
-                    <p>
-                      Eligibility: <span className="green">{formatPercent(Number(uni.eligibility_probability || 0))}</span>
-                    </p>
                     <p className="uni-card-hint">Click this card to view eligible programs.</p>
+                  </div>
+
+                  <div className="uni-card-side">
+                    <div className="uni-match-pill">
+                      <small>Match</small>
+                      <strong>{formatPercent(Number(uni.eligibility_probability || 0))}</strong>
+                    </div>
                     {uni.url && (
-                      <p>
-                        <a
-                          href={uni.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="uni-link"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          Visit University Website
-                        </a>
-                      </p>
+                      <a
+                        href={uni.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="uni-open-link"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        Visit Website
+                      </a>
                     )}
                   </div>
-                </div>
+                </article>
               ))}
 
             {!loading && !error && filteredResults.length > 0 && totalPages > 1 && (

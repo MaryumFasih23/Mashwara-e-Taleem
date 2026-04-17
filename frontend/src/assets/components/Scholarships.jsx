@@ -170,11 +170,13 @@ export default function Scholarships() {
       String(item.amount).toLowerCase().includes("fully funded")
     ).length;
     const government = scholarships.filter((item) => item.isGovernment).length;
+    const countries = new Set(scholarships.map((item) => item.country)).size;
 
     return [
       { label: "Scholarships", value: scholarships.length },
       { label: "Fully funded", value: fullyFunded },
       { label: "Government", value: government },
+      { label: "Countries", value: countries },
     ];
   }, [scholarships]);
 
@@ -186,7 +188,7 @@ export default function Scholarships() {
             <p className="eyebrow">Mashwara-e-Taleem</p>
             <h1>Scholarships</h1>
             <p className="page-subtitle">
-              Ranked Bachelor and Master scholarships from trusted global sources.
+              Explore ranked scholarship opportunities, compare funding type, and prioritize your best-fit applications.
             </p>
           </div>
 

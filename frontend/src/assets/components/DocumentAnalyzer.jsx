@@ -165,6 +165,13 @@ export default function DocumentAnalyzer() {
     ? Math.min(blendedOverallScore, 72)
     : blendedOverallScore;
 
+  const heroStats = [
+    { label: "Quality Score", value: result ? `${displayedOverallScore}%` : "--" },
+    { label: "Grammar Issues", value: result ? grammarErrorCount : "--" },
+    { label: "Doc Type", value: result ? docType || "Unknown" : "--" },
+    { label: "Keywords Missing", value: result ? missingKws.length : "--" },
+  ];
+
   const scoreToneClass = (value) =>
     value <= 50 ? "da-score-red" : value <= 75 ? "da-score-yellow" : "da-score-green";
 
@@ -250,9 +257,27 @@ export default function DocumentAnalyzer() {
 
   return (
     <div className="da-container">
+      <section className="da-hero">
+        <div className="da-hero-copy">
+          <p className="da-kicker">Dashboard Journey</p>
+          <h1>Mashwara-e-Taleem Document Analyzer</h1>
+          <p>
+            Analyze personal statements and resumes with structured scoring, line-level improvements,
+            and next-step action plans tailored to your target university and program.
+          </p>
+        </div>
+        <div className="da-stats-grid">
+          {heroStats.map((item, index) => (
+            <article key={item.label} className="da-stat-card" style={{ animationDelay: `${index * 80}ms` }}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
 
       {/* PAGE TITLE */}
-      <h1 className="da-title">Mashwara-e-Taleem Document Analyzer</h1>
+      <h1 className="da-title">Document Workspace</h1>
       <p className="da-subtitle">
         Upload your Personal Statement or Resume for AI-powered feedback and improvement suggestions.
       </p>
@@ -333,6 +358,16 @@ export default function DocumentAnalyzer() {
 
         {/* RIGHT SIDE — RESULTS */}
         <div className="da-results">
+          <div className="da-home-progress-wrap">
+            <div className="da-home-progress-labels">
+              <span>Quality completion</span>
+              <strong>{result ? displayedOverallScore : 0}%</strong>
+            </div>
+            <div className="da-home-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={result ? displayedOverallScore : 0}>
+              <div className="da-home-progress-fill" style={{ width: `${result ? displayedOverallScore : 0}%` }} />
+            </div>
+          </div>
+
           <div className="da-section-card da-overview-card">
             <h3 className="da-section-header">Overall Overview</h3>
             <div className="da-overview-row da-overview-stack">

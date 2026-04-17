@@ -1,27 +1,26 @@
-:root{
+.lp {
   /* Tweaked to match your mock more closely */
-  --page: #a9c6be;            /* page background */
-  --bar: #0a5a55;             /* top strip */
-  --card-bg: #cfe0db;         /* inner card surface tint */
-  --card-border: rgba(255,255,255,.55);
+  --page: #eef7f3;            /* page background */
+  --bar: #1e5d55;             /* top strip */
+  --card-bg: #f0faf5;         /* inner card surface tint */
+  --card-border: rgba(23,50,59,0.12);
   --shadow-side: #6c8a86;     /* side shadow color */
-  --title: #173732;
-  --body: #2a534f;
+  --title: #17323b;
+  --body: #3f5b65;
 
-  --pill: #dbe8e4;            /* input fill */
-  --pill-outline: #aac4be;    /* input border */
-  --ring: rgba(13, 104, 96, .38);
+  --pill: #eef7f3;            /* input fill */
+  --pill-outline: #b7d8c8;    /* input border */
+  --ring: rgba(42, 127, 120, .38);
 
-  --btn: #135f59;             /* primary button */
-  --btn-h: #0f6c66;
+  --btn: #2a7f78;             /* primary button */
+  --btn-h: #1f6f66;
 
-  --google: #e9f2ef;          /* google button */
+  --google: #eef7f3;          /* google button */
   --error: #d95757;
+  min-height: 100vh;
 }
 
 *{box-sizing:border-box}
-html,body,#root{height:100%}
-body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--body)}
 .auth-header {
   background: var(--bar);
   color: #eaf6f5;
@@ -88,6 +87,7 @@ body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto
 .lp-shell{
   width:100%;max-width:1220px;margin:38px auto 48px; padding:0 28px;
   display:grid;grid-template-columns:1.05fr 1fr;gap:42px;align-items:center;
+  position: relative;
 }
 
 /* Card with side cast shadow to the right (like the mock) */
@@ -95,8 +95,9 @@ body{margin:0;background:var(--page);font-family:Inter,system-ui,Segoe UI,Roboto
   position:relative;
   border-radius:22px;
   padding:44px 40px 30px;
-  background:linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,.2)), var(--card-bg);
+  background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.5)), var(--card-bg);
   border:1px solid var(--card-border);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.16);
 }
 .lp-card::after{
   content:"";

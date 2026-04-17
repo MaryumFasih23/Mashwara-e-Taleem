@@ -2,11 +2,12 @@
    SCHOLARSHIPS PAGE — Figma Match
    ============================ */
 
-:root {
+.sch-container {
   --mint-bg: #b7d8c8;
-  --peach-box: #e3c4b8;
+  --peach-box: #d8efe7;
   --teal-box: #a7cbbd;
-  --coral-title: #c9543a;
+  --section-ink: #17323b;
+  --section-body: #3f5b65;
 
   --deep-red: #b73939;
   --deep-green: #246b3c;
@@ -14,8 +15,8 @@
   --radius-card: 18px;
   --radius-inner: 12px;
 
-  --shadow-heavy: 0 4px 12px rgba(0, 0, 0, 0.28);
-  --shadow-soft: 0 3px 8px rgba(0, 0, 0, 0.18);
+  --shadow-heavy: 0 14px 28px rgba(23, 50, 59, 0.1);
+  --shadow-soft: 0 6px 14px rgba(23, 50, 59, 0.07);
 
   --font-ui: "Poppins", system-ui, sans-serif;
 }
@@ -23,6 +24,11 @@
 .sch-container {
   width: 100%;
   font-family: var(--font-ui);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23,50,59,0.11);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 14px 28px rgba(23,50,59,0.1);
 }
 
 /* =============================
@@ -33,7 +39,7 @@
   text-align: center;
   font-size: 34px;
   font-weight: 700;
-  color: var(--coral-title);
+  color: #2a7f78;
   margin-bottom: 25px;
 }
 
@@ -52,7 +58,8 @@
 
 .sch-filters {
   width: 260px;
-  background: var(--peach-box);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(23,50,59,0.1);
   padding: 22px;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-heavy);
@@ -101,11 +108,12 @@
   margin-top: 20px;
   width: 100%;
   padding: 12px;
-  border-radius: var(--radius-inner);
-  background: #d29f8e;
+  border-radius: 999px;
+  background: #2a7f78;
   border: none;
   cursor: pointer;
   font-weight: 600;
+  color: #fff;
   transition: 0.2s;
 }
 
@@ -143,10 +151,11 @@
 .sch-card {
   display: flex;
   gap: 20px;
-  background: var(--teal-box);
+  background: linear-gradient(180deg, #f0faf5, #d8efe7);
   padding: 20px;
   border-radius: var(--radius-card);
   margin-bottom: 20px;
+  border: 1px solid rgba(23,50,59,0.1);
   box-shadow: var(--shadow-heavy);
 }
 
