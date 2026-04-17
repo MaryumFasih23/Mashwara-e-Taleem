@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Signup.css";
 import logo from "../logo.png";
 import signupImage from "../signup-image.png";
 import { signupWithEmail, loginWithGoogle } from "../../firebaseAuth";
 
 export default function Signup() {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -19,6 +21,7 @@ export default function Signup() {
     pw2: false,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   // VALIDATION
   const nameError = useMemo(() => {
@@ -62,6 +65,7 @@ export default function Signup() {
   async function onSubmit(e) {
     e.preventDefault();
     setTouched({ name: true, email: true, pw: true, pw2: true });
+    setAuthError("");
     if (!valid) return;
 
     setSubmitting(true);
@@ -82,9 +86,9 @@ export default function Signup() {
         }),
       });
 
-      alert("Signup successful!");
+      navigate("/dashboard");
     } catch (error) {
-      alert(error.message);
+      setAuthError(error?.message || "Unable to sign up. Please try again.");
     }
 
     setSubmitting(false);
@@ -92,11 +96,14 @@ export default function Signup() {
 
   // GOOGLE SIGNUP
   async function handleGoogleSignup() {
+    setAuthError("");
+    setSubmitting(true);
+
     try {
       const result = await loginWithGoogle();
       const user = result.user;
 
-      await fetch("http://localhost:5000/api/users/create", {
+      const response = await fetch("http://localhost:5000/api/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -106,10 +113,17 @@ export default function Signup() {
         }),
       });
 
-      alert("Signed up with Google!");
+      // Allow pre-existing profile users to continue seamlessly.
+      if (!response.ok && response.status !== 409) {
+        throw new Error("Unable to set up your profile right now.");
+      }
+
+      navigate("/dashboard");
     } catch (error) {
       console.error("Google signup error:", error);
-      alert(error.message);
+      setAuthError(error?.message || "Google sign-up failed. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -142,6 +156,8 @@ export default function Signup() {
         <section className="su-card" role="region" aria-label="Create Account">
           <h1 className="su-title">Create Account</h1>
           <p className="su-sub">Start your application journey today</p>
+
+          {authError && <div className="su-help" role="alert">{authError}</div>}
 
           {/* FORM */}
           <form className="su-form" onSubmit={onSubmit} noValidate>
@@ -247,7 +263,7 @@ export default function Signup() {
           <div className="su-or">OR</div>
 
           {/* GOOGLE SIGNUP */}
-          <button type="button" className="su-google" onClick={handleGoogleSignup}>
+          <button type="button" className="su-google" onClick={handleGoogleSignup} disabled={submitting}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="18"

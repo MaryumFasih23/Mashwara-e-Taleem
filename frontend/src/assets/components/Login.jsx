@@ -7,13 +7,14 @@ import logo from "../logo.png";
 import { createUserProfile } from "../../api/userapi";
 
 export default function Login() {
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const [touched, setTouched] = useState({ email: false, pw: false });
   const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const emailError = useMemo(() => {
     if (!touched.email) return "";
@@ -29,26 +30,23 @@ const navigate = useNavigate();
 
   const valid = email && pw && !emailError && !pwError;
 
-async function onSubmit(e) {
-  e.preventDefault();
-  setTouched({ email: true, pw: true });
-  if (!valid) return;
-  setSubmitting(true);
+  async function onSubmit(e) {
+    e.preventDefault();
+    setTouched({ email: true, pw: true });
+    setAuthError("");
+    if (!valid) return;
+    setSubmitting(true);
 
-  try {
-    await loginWithEmail(email, pw);
-
-    alert("Login successful!");
-    navigate("/dashboard");
-    console.log("User logged in successfully");
-    // You can navigate to homepage or dashboard here later
-  } catch (error) {
-    console.error("Login error:", error);
-    alert(error.message);
+    try {
+      await loginWithEmail(email, pw);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      setAuthError(error?.message || "Unable to log in. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  setSubmitting(false);
-}
 
   return (
     <div className="lp">
@@ -70,6 +68,8 @@ async function onSubmit(e) {
             Log In to access your dashboard and continue optimizing your
             application process
           </p>
+
+          {authError && <div className="lp-help" role="alert">{authError}</div>}
 
           <form className="lp-form" onSubmit={onSubmit} noValidate>
             <label className="lp-label" htmlFor="email">Email</label>
@@ -117,28 +117,37 @@ async function onSubmit(e) {
 
           <div className="lp-or" role="separator">OR</div>
 
-          <button type="button" className="lp-google" onClick={async () => {
-  try {
-    const result = await loginWithGoogle();
-    console.log("Google login success:", result.user);
-    // Create user in MongoDB if they don't exist yet
-    try {
-      await createUserProfile({
-        uid: result.user.uid,
-        name: result.user.displayName || "User",
-        email: result.user.email,
-      });
-    } catch (err) {
-      // Ignore "already exists" error - user already in DB
-    }
-    alert("Logged in with Google!");
-    navigate("/dashboard");
-  } catch (error) {
-    console.error("Google login error:", error);
-    alert(error.message);
-  }
-}}
->
+          <button
+            type="button"
+            className="lp-google"
+            onClick={async () => {
+              setSubmitting(true);
+              setAuthError("");
+
+              try {
+                const result = await loginWithGoogle();
+
+                // Create user in MongoDB if they don't exist yet
+                try {
+                  await createUserProfile({
+                    uid: result.user.uid,
+                    name: result.user.displayName || "User",
+                    email: result.user.email,
+                  });
+                } catch {
+                  // Ignore create-profile errors for existing users.
+                }
+
+                navigate("/dashboard");
+              } catch (error) {
+                console.error("Google login error:", error);
+                setAuthError(error?.message || "Google sign-in failed. Please try again.");
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            disabled={submitting}
+          >
             {/* Inline Google 'G' SVG so it always renders */}
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48" aria-hidden>
               <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.678 32.91 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20c0-1.341-.138-2.65-.389-3.917z"/>

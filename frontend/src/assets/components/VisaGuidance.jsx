@@ -137,7 +137,7 @@ const VISA_DATA = {
     ],
     processingTime: "4–12 weeks",
     fee: "~€75",
-    link: "https://www.make-it-in-germany.com/en/visa-residence/types/study",
+    link: "https://www.make-it-in-germany.com/en/visa-residence/types/studying",
   },
 };
 
