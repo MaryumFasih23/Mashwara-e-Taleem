@@ -3,6 +3,8 @@ import "./DocumentAnalyzer.css";
 import { analyzeDocument } from "../../api/documentapi";
 
 export default function DocumentAnalyzer() {
+  const allowedExtensions = [".pdf", ".docx", ".txt"];
+  const maxFileSizeBytes = 10 * 1024 * 1024;
   const [activeTab, setActiveTab]       = useState("ps");
   const [university, setUniversity]     = useState("");
   const [program, setProgram]           = useState("");
@@ -13,36 +15,67 @@ export default function DocumentAnalyzer() {
   const [expanded, setExpanded]         = useState({
     lineIssues: true,
     sectionInsights: true,
+    toneDetection: true,
     programAlignment: true,
     resumeBullets: true,
   });
   const fileInputRef                    = useRef(null);
 
+  const validateFile = (selected) => {
+    if (!selected) return "Please select a file to upload.";
+    const lowerName = selected.name.toLowerCase();
+    const isAllowed = allowedExtensions.some((ext) => lowerName.endsWith(ext));
+    if (!isAllowed) return "Unsupported file type. Please upload a PDF, DOCX, or TXT file.";
+    if (selected.size > maxFileSizeBytes) return "File is too large. Please upload a document under 10 MB.";
+    return "";
+  };
+
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
-    if (selected) setFile(selected);
+    const validationError = validateFile(selected);
+    if (validationError) {
+      setFile(null);
+      setError(validationError);
+      return;
+    }
+    setError("");
+    setFile(selected);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
+    const validationError = validateFile(dropped);
+    if (validationError) {
+      setFile(null);
+      setError(validationError);
+      return;
+    }
+    setError("");
+    setFile(dropped);
   };
 
   const handleSubmit = async () => {
-    if (!file)       return setError("Please select a file to upload.");
-    if (!university) return setError("Please enter a university name.");
-    if (!program)    return setError("Please enter a program name.");
+    const cleanUniversity = university.trim();
+    const cleanProgram = program.trim();
+    const validationError = validateFile(file);
+    if (validationError)    return setError(validationError);
+    if (!cleanUniversity)   return setError("Please enter a university name.");
+    if (!cleanProgram)      return setError("Please enter a program name.");
 
     setError("");
     setLoading(true);
     setResult(null);
 
     try {
-      const data = await analyzeDocument({ file, university, program });
+      const data = await analyzeDocument({ file, university: cleanUniversity, program: cleanProgram });
       setResult(data);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Analysis failed. Please try again.");
+      setError(
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        "Analysis failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -54,6 +87,10 @@ export default function DocumentAnalyzer() {
   const weaknesses     = result?.evaluation?.weaknesses ?? [];
   const atsScore       = result?.ats_score?.ats_score;
   const grammarScore   = result?.grammar?.grammar_quality_score;
+  const grammarErrorCount = result?.grammar?.grammar_error_count ?? result?.grammar?.count ?? 0;
+  const domainAlignment = result?.domain_alignment ?? result?.evaluation?.program_specificity?.domain_alignment ?? {};
+  const domainScore = domainAlignment?.score;
+  const hasDomainMismatch = Boolean(domainAlignment?.is_mismatch);
   const missingKws     = result?.evaluation?.program_specificity?.missing_keywords_to_add ?? [];
   const actionPlan     = result?.evaluation?.action_plan_next_revision ?? [];
   const rawLineIssues  = result?.evaluation?.line_issues;
@@ -67,14 +104,37 @@ export default function DocumentAnalyzer() {
     String(s || "")
       .trim()
       .replace(/\s+/g, " ");
-  /** Case-insensitive: hide only true no-ops (same text, ignoring case). */
-  const displayLineIssues = lineIssues.filter((li) => {
+  const normalizeIssueText = (s) =>
+    normalizeWs(s)
+      .replace(/^(original|suggested|improved)\s*:\s*/i, "")
+      .replace(/\s+([,.;:!?])/g, "$1")
+      .toLowerCase();
+  const isNoopIssue = (li) => {
     const o = normalizeWs(li?.original_line);
     const i = normalizeWs(li?.improved_line);
-    if (!o) return false;
-    if (li?.rule_id === "HEURISTIC_LOWERCASE_SENTENCE_START") return true;
-    return i && o.toLowerCase() !== i.toLowerCase();
-  });
+    if (!o || !i) return true;
+    if (li?.rule_id === "HEURISTIC_LOWERCASE_SENTENCE_START") return false;
+    const comparableOriginal = normalizeIssueText(o);
+    const comparableImproved = normalizeIssueText(i);
+    if (comparableOriginal === comparableImproved) return true;
+    return (
+      comparableOriginal.replace(/[^a-z0-9]+/g, "") ===
+      comparableImproved.replace(/[^a-z0-9]+/g, "")
+    );
+  };
+  const displayLineIssues = lineIssues.reduce((acc, li) => {
+    if (isNoopIssue(li)) return acc;
+    const key = [
+      li?.line_number ?? "",
+      normalizeIssueText(li?.original_line).slice(0, 140),
+      String(li?.issue_type || "").toLowerCase(),
+      normalizeIssueText(li?.improved_line).slice(0, 140),
+    ].join("|");
+    if (acc.seen.has(key)) return acc;
+    acc.seen.add(key);
+    acc.items.push(li);
+    return acc;
+  }, { seen: new Set(), items: [] }).items;
   const displayedIssueCount = displayLineIssues.length;
   const sanitizeUi = (s) =>
     String(s || "")
@@ -90,15 +150,20 @@ export default function DocumentAnalyzer() {
   const resumeBullets =
     result?.evaluation?.resume_bullet_analysis ?? [];
   const docType = result?.classification?.doc_type;
+  const toneReport = result?.tone_detection ?? {};
 
   const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value || 0)));
   /** Aligned with backend: grammar score tracks visible line-issue count */
   const displayedGrammarScore = clampScore(grammarScore ?? 0);
   const qualityProxy = clampScore(score);
   const atsProxy = typeof atsScore === "number" ? clampScore(atsScore) : qualityProxy;
-  const displayedOverallScore = clampScore(
-    displayedGrammarScore * 0.35 + atsProxy * 0.25 + qualityProxy * 0.4
+  const domainProxy = typeof domainScore === "number" ? clampScore(domainScore) : qualityProxy;
+  const blendedOverallScore = clampScore(
+    displayedGrammarScore * 0.3 + atsProxy * 0.2 + qualityProxy * 0.25 + domainProxy * 0.25
   );
+  const displayedOverallScore = hasDomainMismatch
+    ? Math.min(blendedOverallScore, 72)
+    : blendedOverallScore;
 
   const scoreToneClass = (value) =>
     value <= 50 ? "da-score-red" : value <= 75 ? "da-score-yellow" : "da-score-green";
@@ -136,6 +201,7 @@ export default function DocumentAnalyzer() {
     lines.push(`Overall Score: ${displayedOverallScore}% (${label || "N/A"})`);
     lines.push(`Grammar Score: ${displayedGrammarScore}%`);
     if (typeof atsScore === "number") lines.push(`ATS Score: ${clampScore(atsScore)}%`);
+    if (toneReport?.tone) lines.push(`Tone: ${toneReport.tone}`);
     lines.push("");
 
     lines.push("Top Strengths:");
@@ -253,7 +319,7 @@ export default function DocumentAnalyzer() {
             />
           </div>
 
-          {error && <p style={{ color: "red", marginTop: "10px", fontWeight: 600 }}>{error}</p>}
+          {error && <p className="da-error-text">{error}</p>}
 
           <button
             className="da-submit"
@@ -283,6 +349,11 @@ export default function DocumentAnalyzer() {
                       {`ATS ${clampScore(atsScore)}%`}
                     </div>
                   )}
+                  {typeof domainScore === "number" && (
+                    <div className="da-score-box da-score-compact">
+                      {`Domain ${clampScore(domainScore)}%`}
+                    </div>
+                  )}
                 </div>
               )}
               {renderProgress(
@@ -294,11 +365,18 @@ export default function DocumentAnalyzer() {
                 renderProgress(
                   "Grammar Score",
                   displayedGrammarScore,
-                  `${displayedIssueCount} issue(s) shown`
+                  `${grammarErrorCount} grammar error(s)`
                 )}
               {result &&
                 typeof atsScore === "number" &&
                 renderProgress("ATS Score", clampScore(atsScore), "Resume ATS readiness")}
+              {result &&
+                typeof domainScore === "number" &&
+                renderProgress(
+                  "Domain Alignment Score",
+                  clampScore(domainScore),
+                  domainAlignment?.message || ""
+                )}
             </div>
 
             <div className="da-overview-lists">
@@ -387,9 +465,7 @@ export default function DocumentAnalyzer() {
                           </p>
                         )}
                         {li.improved_line &&
-                          (li.rule_id === "HEURISTIC_LOWERCASE_SENTENCE_START" ||
-                            normalizeWs(li.original_line).toLowerCase() !==
-                              normalizeWs(li.improved_line).toLowerCase()) && (
+                          !isNoopIssue(li) && (
                           <p className="da-line-improved">
                             <span className="da-inline-label">Suggested:</span>{" "}
                             {sanitizeUi(li.improved_line)}
@@ -515,6 +591,33 @@ export default function DocumentAnalyzer() {
             )}
           </div>
 
+          {/* TONE DETECTION CARD */}
+          <div className="da-section-card da-tone-card">
+            <button
+              className="da-accordion-header"
+              onClick={() => toggleCard("toneDetection")}
+            >
+              <h3 className="da-section-header">Tone Detection</h3>
+              <span>{expanded.toneDetection ? "Hide" : "Show"}</span>
+            </button>
+            {!result && <p className="da-muted">Run an analysis to see tone feedback.</p>}
+            {result && expanded.toneDetection && (
+              <div className="da-tone-summary">
+                <span className="da-tag da-tag-type">
+                  {toneReport?.tone || "Neutral"}
+                </span>
+                <p>{toneReport?.message || "Tone feedback is not available."}</p>
+                {Array.isArray(toneReport?.informal_words) &&
+                  toneReport.informal_words.length > 0 && (
+                  <p className="da-keyword-list">
+                    <span className="da-inline-label">Words to review:</span>{" "}
+                    {toneReport.informal_words.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* PROGRAM ALIGNMENT CARD */}
           <div className="da-section-card da-program-card">
             <button
@@ -527,6 +630,42 @@ export default function DocumentAnalyzer() {
             {!result && <p className="da-muted">Run an analysis to see alignment.</p>}
             {result && expanded.programAlignment && (
               <>
+                {hasDomainMismatch && (
+                  <div className="da-domain-warning">
+                    <p className="da-domain-warning-title">
+                      Document is well-written but not aligned with target field
+                    </p>
+                    <p>
+                      Target field: {domainAlignment?.target_domain || "Unknown"}.
+                      Document appears closer to: {domainAlignment?.document_domain || "Unknown"}.
+                    </p>
+                  </div>
+                )}
+
+                {typeof domainScore === "number" && (
+                  <div className="da-domain-summary">
+                    {renderProgress(
+                      "Domain Alignment Score",
+                      clampScore(domainScore),
+                      domainAlignment?.message || ""
+                    )}
+                    {Array.isArray(domainAlignment?.matched_target_keywords) &&
+                      domainAlignment.matched_target_keywords.length > 0 && (
+                      <p className="da-keyword-list">
+                        <span className="da-inline-label">Matched target keywords:</span>{" "}
+                        {domainAlignment.matched_target_keywords.join(", ")}
+                      </p>
+                    )}
+                    {Array.isArray(domainAlignment?.document_keywords) &&
+                      domainAlignment.document_keywords.length > 0 && (
+                      <p className="da-keyword-list">
+                        <span className="da-inline-label">Document keywords:</span>{" "}
+                        {domainAlignment.document_keywords.slice(0, 12).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <p className="da-tag-label">Missing / Recommended Keywords</p>
                 {missingKws.length === 0 ? (
                   <p className="da-muted">No missing program-specific keywords detected.</p>

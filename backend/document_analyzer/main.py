@@ -1,4 +1,4 @@
-import os, re, json, pickle, tempfile, shutil
+import os, re, json, pickle, tempfile, shutil, asyncio
 import numpy as np
 import pandas as pd
 from pypdf import PdfReader
@@ -89,6 +89,54 @@ ARTICLE_NOUNS = (
     "dashboard", "website", "api", "project", "course", "program",
 )
 
+DOMAIN_KEYWORDS = {
+    "computer_science": {
+        "computer", "science", "software", "programming", "algorithm", "algorithms",
+        "data", "database", "ai", "artificial", "intelligence", "machine", "learning",
+        "python", "java", "javascript", "typescript", "react", "node", "fastapi",
+        "api", "backend", "frontend", "cloud", "security", "network", "systems",
+        "engineering", "developer", "web", "application", "model", "models",
+        "faiss", "langchain", "prisma", "postgresql", "mysql", "firebase",
+    },
+    "law": {
+        "law", "legal", "court", "courts", "case", "cases", "contract", "contracts",
+        "constitution", "constitutional", "policy", "rights", "justice", "litigation",
+        "advocacy", "regulation", "regulatory", "compliance", "criminal", "civil",
+        "corporate", "jurisprudence", "legislation", "statute", "statutes", "trial",
+        "moot", "clerkship", "attorney", "lawyer", "evidence", "ethics",
+    },
+    "business": {
+        "business", "management", "finance", "financial", "marketing", "market",
+        "markets", "strategy", "strategic", "operations", "entrepreneurship",
+        "startup", "revenue", "sales", "accounting", "investment", "investments",
+        "consulting", "analytics", "economics", "leadership", "supply", "chain",
+        "product", "customer", "customers", "brand", "profit", "budget", "growth",
+        "mba", "commerce",
+    },
+    "arts": {
+        "arts", "art", "design", "visual", "creative", "creativity", "studio",
+        "painting", "drawing", "sculpture", "illustration", "photography",
+        "film", "media", "animation", "portfolio", "gallery", "museum",
+        "history", "culture", "cultural", "humanities", "literature", "music",
+        "theatre", "theater", "performance", "aesthetic", "composition",
+    },
+}
+
+DOMAIN_LABELS = {
+    "computer_science": "Computer Science",
+    "law": "Law",
+    "business": "Business",
+    "arts": "Arts",
+}
+
+DOMAIN_KEYWORD_MAPPING = {
+    "ai": {"ai", "artificial intelligence", "machine learning", "deep learning", "nlp", "natural language processing"},
+    "backend": {"backend", "fastapi", "node", "node.js", "api", "apis", "server", "server-side"},
+    "frontend": {"frontend", "front-end", "react", "next.js", "nextjs", "ui", "user interface"},
+    "data": {"data", "sql", "database", "databases", "mongodb", "mongo", "postgresql", "mysql"},
+    "cloud": {"cloud", "firebase", "supabase", "vercel", "deployment", "hosting"},
+}
+
 # ── GLOBAL STATE (loaded once at startup) ───────────────────────
 _state = {
     "client":     None,
@@ -177,6 +225,20 @@ def retrieve(df: pd.DataFrame, index, query: str, embedder, k: int = 3) -> pd.Da
     out = df.iloc[I[0]].copy()
     out["score"] = D[0]
     return out
+
+
+def retrieve_from_embedding(df: pd.DataFrame, index, query_embedding, k: int = 3) -> pd.DataFrame:
+    D, I = index.search(query_embedding, k)
+    out = df.iloc[I[0]].copy()
+    out["score"] = D[0]
+    return out
+
+
+def retrieve_context(unis, progs, uni_index, prog_index, query: str, embedder, k: int = 3) -> str:
+    query_embedding = embedder.encode([query], normalize_embeddings=True).astype("float32")
+    u_rows = retrieve_from_embedding(unis, uni_index, query_embedding, k=k)
+    p_rows = retrieve_from_embedding(progs, prog_index, query_embedding, k=k)
+    return "\n".join(list(u_rows["combined"]) + list(p_rows["combined"]))
 
 
 # ── LIFESPAN (replaces deprecated @app.on_event) ────────────────
@@ -579,15 +641,25 @@ def _sanitize_placeholder_text(s: str) -> str:
 
 def _grammar_score_from_count(issue_count: int) -> int:
     """
-    Keep the score tied visibly to issue volume. Bad drafts should fall fast;
-    clean drafts should not be punished much for one or two minor findings.
+    Score only true grammar errors. A clean or nearly clean SOP should stay high,
+    while drafts with many grammar errors should drop quickly.
     """
     n = max(0, int(issue_count or 0))
-    if n <= 2:
-        return max(0, 100 - n * 5)
-    if n <= 10:
-        return max(0, 90 - (n - 2) * 5)
-    return max(0, 50 - (n - 10) * 3)
+    if n == 0:
+        return 100
+    if n <= 3:
+        return max(0, 100 - n * 3)
+    if n <= 8:
+        return max(0, 91 - (n - 3) * 4)
+    return max(0, 71 - (n - 8) * 5)
+
+
+def _is_real_grammar_issue(issue: dict) -> bool:
+    return isinstance(issue, dict) and str(issue.get("issue_type", "")).lower() == "grammar"
+
+
+def _grammar_error_count(issues: list) -> int:
+    return sum(1 for issue in issues if _is_real_grammar_issue(issue))
 
 
 def _article_for_word(word: str) -> str:
@@ -661,7 +733,7 @@ def _detect_informal_words(line_no: int, line: str) -> list:
         else:
             improved = (line[:m.start()] + line[m.end():]).replace("  ", " ").strip()
         issues.append(_make_heuristic_issue(
-            line_no, "grammar", "minor", line, improved,
+            line_no, "clarity", "minor", line, improved,
             f"'{m.group(0)}' is informal; use more precise academic or resume wording.",
             "HEURISTIC_INFORMAL_WORD",
         ))
@@ -796,6 +868,31 @@ def _is_noise_line_issue(li: dict) -> bool:
     return False
 
 
+def _line_issue_compare_text(value: str) -> str:
+    text = _sanitize_placeholder_text(value or "")
+    text = re.sub(r"^\s*(original|suggested|improved)\s*:\s*", "", text, flags=re.I)
+    text = text.strip().strip("\"'`")
+    text = _normalize_ws(text).lower()
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    return text
+
+
+def _is_noop_line_suggestion(original: str, improved: str, rule_id: str = "") -> bool:
+    o = _line_issue_compare_text(original)
+    i = _line_issue_compare_text(improved)
+    if not o or not i:
+        return True
+    if rule_id == "HEURISTIC_LOWERCASE_SENTENCE_START":
+        return False
+    if o == i:
+        return True
+    if re.sub(r"[^a-z0-9]+", "", o) == re.sub(r"[^a-z0-9]+", "", i):
+        return True
+    if i.startswith(o) and len(i) <= len(o) + 3:
+        return True
+    return False
+
+
 def _line_ranges(text: str):
     out = []
     pos = 0
@@ -863,11 +960,17 @@ def _dedupe_line_issues(items):
     for li in items:
         if not isinstance(li, dict):
             continue
+        if _is_noise_line_issue(li):
+            continue
+        original = li.get("original_line", "")
+        improved = li.get("improved_line", "") or _first_replacement_str(li.get("replacements") or [])
+        if _is_noop_line_suggestion(original, improved, li.get("rule_id", "")):
+            continue
         key = (
             int(li.get("line_number", 0)),
-            _normalize_ws(li.get("original_line", ""))[:80],
-            _normalize_ws(li.get("improved_line", "") or _first_replacement_str(li.get("replacements") or []))[:80],
-            str(li.get("rule_id", "") or li.get("message", "") or li.get("explanation", ""))[:80],
+            _line_issue_compare_text(original)[:120],
+            str(li.get("issue_type", "")).lower(),
+            _line_issue_compare_text(improved)[:120],
         )
         if key in seen:
             continue
@@ -895,6 +998,57 @@ def _merge_grammar_line_issues(text: str, grammar_report: dict, llm_issues: list
         if row and not _is_noise_line_issue(row):
             merged.append(row)
     return _dedupe_line_issues(merged)
+
+
+def _finalize_line_issues(items: list) -> list:
+    severity_rank = {"critical": 0, "important": 1, "minor": 2}
+    issue_rank = {"grammar": 0, "clarity": 1, "formatting": 2, "tone": 3, "ats": 4}
+    cleaned = []
+    seen_suggestions = set()
+    seen_issue_reason = set()
+    candidates = sorted(
+        [x for x in items if isinstance(x, dict)],
+        key=lambda x: (
+            int(x.get("line_number", 0) or 0),
+            severity_rank.get(str(x.get("severity", "minor")).lower(), 3),
+            issue_rank.get(str(x.get("issue_type", "clarity")).lower(), 9),
+        )
+    )
+
+    for li in _dedupe_line_issues(candidates):
+        if not isinstance(li, dict):
+            continue
+        original = li.get("original_line", "")
+        improved = li.get("improved_line", "")
+        rule_id = li.get("rule_id", "")
+        if _is_noop_line_suggestion(original, improved, rule_id):
+            continue
+
+        original_key = _line_issue_compare_text(original)[:140]
+        improved_key = _line_issue_compare_text(improved)[:140]
+        issue_type = str(li.get("issue_type", "clarity")).lower()
+        reason_key = _line_issue_compare_text(li.get("explanation", ""))[:80]
+
+        suggestion_key = (int(li.get("line_number", 0) or 0), original_key, improved_key)
+        if suggestion_key in seen_suggestions:
+            continue
+        seen_suggestions.add(suggestion_key)
+
+        issue_reason_key = (int(li.get("line_number", 0) or 0), original_key, issue_type, reason_key)
+        if issue_reason_key in seen_issue_reason:
+            continue
+        seen_issue_reason.add(issue_reason_key)
+
+        cleaned.append(li)
+
+    return sorted(
+        cleaned,
+        key=lambda x: (
+            int(x.get("line_number", 0) or 0),
+            severity_rank.get(str(x.get("severity", "minor")).lower(), 3),
+            issue_rank.get(str(x.get("issue_type", "clarity")).lower(), 9),
+        )
+    )
 
 
 def _filter_program_specificity(prog_spec: dict, prog_name: str, uni_name: str, program_fit: dict) -> dict:
@@ -985,10 +1139,12 @@ def grammar_check(text, max_issues=None):
     heuristic_issues      = _heuristic_grammar_issues(text)
     issues.extend(heuristic_issues)
     issues                = _dedupe_line_issues(issues)
-    issue_count           = len(issues)
-    grammar_quality_score = _grammar_score_from_count(issue_count)
+    grammar_issue_count   = _grammar_error_count(issues)
+    grammar_quality_score = _grammar_score_from_count(grammar_issue_count)
     return {
-        "count":                 issue_count,
+        "count":                 grammar_issue_count,
+        "grammar_error_count":   grammar_issue_count,
+        "total_issue_count":     len(issues),
         "grammar_quality_score": grammar_quality_score,
         "issues":                issues,
         "corrected":             corrected
@@ -1061,6 +1217,279 @@ def extract_program_keywords(context, top_k=30):
         freq[w] = freq.get(w, 0) + 1
     freq = {w: c for w, c in freq.items() if c >= 2}
     return [w for w, _ in sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_k]]
+
+
+def _extract_document_keywords(text: str, top_k: int = 40) -> list:
+    clean = re.sub(r"https?://\S+|www\.\S+|[\w.%+-]+@[\w.-]+", " ", text.lower())
+    words = re.findall(r"[a-zA-Z][a-zA-Z+#.]{2,}", clean)
+    words = [w.strip(".") for w in words if w not in KEYWORD_STOPLIST and len(w.strip(".")) >= 3]
+    freq = {}
+    for w in words:
+        freq[w] = freq.get(w, 0) + 1
+    return [w for w, _ in sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_k]]
+
+
+def _normalize_domain_text(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").lower()).strip()
+
+
+def _domain_text_terms(text: str) -> set:
+    clean = _normalize_domain_text(text)
+    raw_terms = re.findall(r"[a-z][a-z0-9+#.]*", clean)
+    terms = {t.strip(".") for t in raw_terms if t.strip(".")}
+    for m in re.finditer(r"[a-z][a-z0-9+#.]+(?:\s+[a-z][a-z0-9+#.]+){1,3}", clean):
+        terms.add(m.group(0).strip())
+    return terms
+
+
+def _singularize_domain_term(term: str) -> str:
+    term = term.lower().strip()
+    if len(term) > 4 and term.endswith("ies"):
+        return term[:-3] + "y"
+    if len(term) > 3 and term.endswith("s") and not term.endswith("ss"):
+        return term[:-1]
+    return term
+
+
+def _related_terms_for_keyword(keyword: str) -> set:
+    key = _normalize_domain_text(keyword)
+    related = {key}
+    for concept, terms in DOMAIN_KEYWORD_MAPPING.items():
+        normalized_terms = {_normalize_domain_text(t) for t in terms}
+        if key == concept or key in normalized_terms:
+            related.add(concept)
+            related.update(normalized_terms)
+    return {t for t in related if t}
+
+
+def _partial_keyword_match(candidate: str, text_terms: set, normalized_text: str) -> bool:
+    candidate = _normalize_domain_text(candidate)
+    if not candidate:
+        return False
+    if " " in candidate:
+        if re.search(rf"\b{re.escape(candidate)}\b", normalized_text):
+            return True
+        return all(_partial_keyword_match(part, text_terms, normalized_text) for part in candidate.split())
+    singular_candidate = _singularize_domain_term(candidate)
+    for term in text_terms:
+        singular_term = _singularize_domain_term(term)
+        if candidate == term or singular_candidate == singular_term:
+            return True
+        if len(singular_candidate) >= 5 and len(singular_term) >= 5:
+            if singular_candidate.startswith(singular_term) or singular_term.startswith(singular_candidate):
+                return True
+    return bool(re.search(rf"\b{re.escape(candidate)}s?\b", normalized_text))
+
+
+def _keyword_matches_domain_text(keyword: str, text_terms: set, normalized_text: str) -> bool:
+    return any(
+        _partial_keyword_match(candidate, text_terms, normalized_text)
+        for candidate in _related_terms_for_keyword(keyword)
+    )
+
+
+def _matched_domain_keywords(keywords, text_terms: set, normalized_text: str) -> list:
+    return sorted({
+        _normalize_domain_text(keyword)
+        for keyword in keywords
+        if _keyword_matches_domain_text(keyword, text_terms, normalized_text)
+    })
+
+
+def _domain_relevance_boost(text: str, target_domain: str, matched_target: list) -> int:
+    normalized_text = _normalize_domain_text(text)
+    text_terms = _domain_text_terms(text)
+    matched_count = len(matched_target)
+    if matched_count == 0:
+        return 0
+
+    boost = 0
+    project_signal = bool(re.search(r"\b(project|projects|built|developed|implemented|designed|created|deployed)\b", normalized_text))
+    tool_signal = bool(re.search(r"\b(tool|tools|technology|technologies|skills|stack|framework|library|platform)\b", normalized_text))
+    internship_signal = bool(re.search(r"\b(intern|internship|worked|experience|assistant|trainee)\b", normalized_text))
+
+    domain_tool_hits = _matched_domain_keywords(DOMAIN_KEYWORDS.get(target_domain, set()), text_terms, normalized_text)
+    if project_signal and domain_tool_hits:
+        boost += 12
+    if tool_signal and domain_tool_hits:
+        boost += 10
+    if internship_signal and domain_tool_hits:
+        boost += 8
+    if matched_count >= 6:
+        boost += 8
+    elif matched_count >= 3:
+        boost += 5
+    return min(boost, 25)
+
+
+def _target_domain_from_text(prog_name: str, context: str = "") -> str:
+    program_source = _normalize_domain_text(prog_name or "")
+    context_source = _normalize_domain_text(context or "")
+    aliases = {
+        "computer_science": (
+            "computer science", "cs", "software", "computing", "data science",
+            "artificial intelligence", "machine learning", "cybersecurity",
+            "information technology", "informatics",
+        ),
+        "law": (
+            "law", "legal", "llb", "jd", "juris", "jurisprudence", "criminology",
+            "public policy", "human rights", "constitutional",
+        ),
+        "business": (
+            "business", "mba", "management", "finance", "marketing", "commerce",
+            "accounting", "entrepreneurship", "economics", "analytics",
+        ),
+        "arts": (
+            "arts", "art", "fine arts", "visual arts", "design", "graphic design",
+            "media arts", "film", "animation", "photography", "music", "theatre",
+            "theater", "humanities", "literature", "history",
+        ),
+    }
+    program_terms = _domain_text_terms(program_source)
+    for domain, terms in aliases.items():
+        if any(_keyword_matches_domain_text(term, program_terms, program_source) for term in terms):
+            return domain
+
+    if len(program_source) >= 3:
+        program_counts = {
+            domain: len(_matched_domain_keywords(keywords, program_terms, program_source))
+            for domain, keywords in DOMAIN_KEYWORDS.items()
+        }
+        program_best, program_best_count = max(program_counts.items(), key=lambda x: x[1])
+        if program_best_count > 0:
+            return program_best
+
+    source = _normalize_domain_text(f"{program_source} {context_source}")
+    source_terms = _domain_text_terms(source)
+    for domain, terms in aliases.items():
+        if any(_keyword_matches_domain_text(term, source_terms, source) for term in terms):
+            return domain
+
+    counts = {
+        domain: len(_matched_domain_keywords(keywords, source_terms, source))
+        for domain, keywords in DOMAIN_KEYWORDS.items()
+    }
+    best, best_count = max(counts.items(), key=lambda x: x[1])
+    return best if best_count > 0 else "unknown"
+
+
+def domain_alignment_check(text: str, prog_name: str, context: str = "") -> dict:
+    normalized_text = _normalize_domain_text(text)
+    text_terms = _domain_text_terms(normalized_text)
+    doc_keywords = _extract_document_keywords(text, top_k=50)
+    target_domain = _target_domain_from_text(prog_name, context)
+
+    domain_hits = {}
+    for domain, keywords in DOMAIN_KEYWORDS.items():
+        hits = _matched_domain_keywords(keywords, text_terms, normalized_text)
+        domain_hits[domain] = hits
+
+    document_domain = "unknown"
+    if domain_hits:
+        best_domain, best_hits = max(domain_hits.items(), key=lambda x: len(x[1]))
+        if len(best_hits) > 0:
+            document_domain = best_domain
+
+    if target_domain == "unknown":
+        return {
+            "target_domain": "Unknown",
+            "document_domain": DOMAIN_LABELS.get(document_domain, "Unknown"),
+            "score": 50,
+            "is_mismatch": False,
+            "message": "Target field was not specific enough for a domain alignment check.",
+            "document_keywords": doc_keywords[:25],
+            "target_keywords": [],
+            "matched_target_keywords": [],
+            "missing_target_keywords": [],
+            "domain_hits": {DOMAIN_LABELS.get(k, k): v[:12] for k, v in domain_hits.items()},
+        }
+
+    target_keywords = DOMAIN_KEYWORDS[target_domain]
+    matched_target = _matched_domain_keywords(target_keywords, text_terms, normalized_text)
+    missing_target = sorted(target_keywords - set(matched_target))[:15]
+    target_hit_count = len(matched_target)
+    other_counts = {
+        domain: len(hits)
+        for domain, hits in domain_hits.items()
+        if domain != target_domain
+    }
+    strongest_other_domain, strongest_other_count = max(other_counts.items(), key=lambda x: x[1]) if other_counts else ("unknown", 0)
+
+    relevance_boost = _domain_relevance_boost(normalized_text, target_domain, matched_target)
+    coverage_base = max(10, min(len(target_keywords), 20))
+    coverage_score = min(100, int((target_hit_count / coverage_base) * 100))
+    contrast_score = 85
+    if strongest_other_count > 0:
+        contrast_score = int((target_hit_count / max(1, target_hit_count + strongest_other_count)) * 100)
+    score = int(round(coverage_score * 0.7 + contrast_score * 0.3)) + relevance_boost
+
+    is_mismatch = (
+        target_hit_count <= 2 and strongest_other_count >= 3 and relevance_boost < 12
+    ) or (
+        strongest_other_count >= target_hit_count + 3 and target_hit_count < 7 and relevance_boost < 18
+    )
+    if is_mismatch:
+        score = min(max(score, 25), 40)
+    elif target_hit_count > 0:
+        score = min(score, 95)
+
+    message = (
+        "Document is well-written but not aligned with target field"
+        if is_mismatch
+        else "Document content is aligned with the target field."
+    )
+
+    return {
+        "target_domain": DOMAIN_LABELS.get(target_domain, target_domain),
+        "document_domain": DOMAIN_LABELS.get(document_domain, "Unknown"),
+        "score": max(0, min(100, score)),
+        "is_mismatch": is_mismatch,
+        "message": message,
+        "document_keywords": doc_keywords[:25],
+        "target_keywords": sorted(target_keywords)[:25],
+        "matched_target_keywords": matched_target[:15],
+        "missing_target_keywords": missing_target,
+        "domain_hits": {DOMAIN_LABELS.get(k, k): v[:12] for k, v in domain_hits.items()},
+    }
+
+
+def detect_tone(text: str) -> dict:
+    normalized_text = _normalize_domain_text(text)
+    informal_hits = []
+    for phrase in INFORMAL_WORD_REPLACEMENTS:
+        if re.search(rf"\b{re.escape(phrase.lower())}\b", normalized_text):
+            informal_hits.append(phrase)
+
+    professional_markers = (
+        "developed", "implemented", "analyzed", "managed", "coordinated",
+        "researched", "designed", "led", "improved", "professional",
+        "experience", "academic", "research", "internship",
+    )
+    professional_hits = sum(
+        1 for marker in professional_markers
+        if re.search(rf"\b{re.escape(marker)}\b", normalized_text)
+    )
+
+    if informal_hits:
+        shown = "', '".join(informal_hits[:3])
+        return {
+            "tone": "Informal",
+            "message": f"Tone is informal. Avoid words like '{shown}', etc.",
+            "informal_words": informal_hits[:8],
+        }
+
+    if professional_hits >= 3:
+        return {
+            "tone": "Professional",
+            "message": "Tone is professional and appropriate.",
+            "informal_words": [],
+        }
+
+    return {
+        "tone": "Neutral",
+        "message": "Tone is neutral and can be made more specific.",
+        "informal_words": [],
+    }
 
 def program_fit_score(text, context):
     tl      = text.lower()
@@ -1201,7 +1630,8 @@ def build_analysis_scaffold(text: str, doc_type: str):
     return {"lines": lines, "sections": sections}
 
 def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_report,
-                          context, program_fit, uni_name, prog_name, ats_report=None):
+                          context, program_fit, uni_name, prog_name, ats_report=None,
+                          domain_alignment=None):
     if doc_type == "RESUME":
         structure_rules = (
             "STRICT RESUME RULES:\n"
@@ -1226,10 +1656,11 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         if ats_report else ""
     )
     grammar_summary = {
-        "issue_count":            grammar_report["count"],
+        "issue_count":            grammar_report.get("grammar_error_count", grammar_report["count"]),
         "quality_score_0_to_100": grammar_report["grammar_quality_score"],
-        "top_issues":             [i["message"] for i in grammar_report["issues"][:10]]
+        "top_issues":             [i["message"] for i in grammar_report["issues"] if _is_real_grammar_issue(i)][:10]
     }
+    domain_alignment = domain_alignment or {}
 
     scaffold = build_analysis_scaffold(corrected, doc_type)
 
@@ -1241,6 +1672,7 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         f"{structure_rules}\n"
         f"UNIVERSITY+PROGRAM CONTEXT:\n{context}\n"
         f"PROGRAM_FIT:\n{json.dumps(program_fit, ensure_ascii=False)}\n"
+        f"DOMAIN_ALIGNMENT:\n{json.dumps(domain_alignment, ensure_ascii=False)}\n"
         f"FORMAT_REPORT:\n{json.dumps(format_report, ensure_ascii=False)}\n"
         f"GRAMMAR_REPORT:\n{json.dumps(grammar_summary, ensure_ascii=False)}\n"
         f"ANALYSIS_SCAFFOLD:\n{json.dumps(scaffold, ensure_ascii=False)}\n"
@@ -1255,6 +1687,8 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         "    \"target_university\": string,\n"
         "    \"target_program\": string,\n"
         "    \"fit_score\": number,\n"
+        "    \"domain_alignment_score\": number,\n"
+        "    \"domain_alignment_message\": string,\n"
         "    \"missing_keywords_to_add\": [string],\n"
         "    \"where_to_add_keywords\": [string],\n"
         "    \"keyword_placement_suggestions\": [\n"
@@ -1329,9 +1763,12 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         "- NEVER change or \"correct\" technical/product/proper nouns such as FastAPI, WhisperX, LangChain, Prisma, FAISS, NaSCon, ICAP, IBA, WordPress, KAIRO, or any mixed-case/all-caps/capitalized non-standard term.\n"
         "- Do NOT suggest spelling replacements unless the correction is obvious and high confidence. If unsure, omit the issue.\n"
         "- Label only true sentence mechanics as grammar. Use clarity for sentence improvement, formatting for spacing/dashes/casing, and ats for missing keywords/metrics/resume targeting.\n"
+        "- Do not mix domain mismatch, clarity, style, ATS, missing metrics, or missing details into grammar.\n"
+        "- If DOMAIN_ALIGNMENT says is_mismatch is true, state that clearly in program_specificity.mismatch_notes using the exact message: Document is well-written but not aligned with target field.\n"
         "- Section headings (Education, Projects, EXPERIENCE, etc.) are formatting, not grammar; do not flag capitalization-only differences as errors.\n"
         "- Do NOT use bracket placeholders like [ADD DETAIL]; give concrete, actionable wording or say what kind of detail to add (e.g., a measurable metric).\n"
         "- Use the ANALYSIS_SCAFFOLD line numbers and sections when populating line_issues and section_analysis.\n"
+        "- In line_issues, never repeat the same original line/suggestion pair. Do not include a line_issue if improved_line is identical or nearly identical to original_line.\n"
         "- Tailor feedback to the TARGET UNIVERSITY and TARGET PROGRAM using PROGRAM_FIT and the provided context; do not invent facts about the university.\n"
         "- For resumes, analyze each bullet individually for action verbs, metrics, and program relevance.\n"
         "- If information is missing, suggest what to add without fabricating numbers.\n"
@@ -1351,10 +1788,21 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         prog_spec["target_university"]       = uni_name
         prog_spec["target_program"]          = prog_name
         prog_spec["fit_score"]               = program_fit.get("program_fit_score", 0)
+        prog_spec["domain_alignment_score"]  = domain_alignment.get("score", 0)
+        prog_spec["domain_alignment_message"] = domain_alignment.get("message", "")
+        prog_spec["domain_alignment"]        = domain_alignment
         prog_spec.setdefault("missing_keywords_to_add", program_fit.get("missing_keywords", [])[:12])
         prog_spec.setdefault("where_to_add_keywords", [])
         prog_spec.setdefault("keyword_placement_suggestions", [])
         prog_spec.setdefault("mismatch_notes", [])
+        if domain_alignment.get("is_mismatch"):
+            msg = "Document is well-written but not aligned with target field"
+            notes = prog_spec.get("mismatch_notes")
+            if not isinstance(notes, list):
+                notes = []
+            if msg not in notes:
+                notes.insert(0, msg)
+            prog_spec["mismatch_notes"] = notes
 
         # Grammar defaults (scores updated after line_issues merge)
         gram = out.setdefault("grammar", {})
@@ -1419,10 +1867,12 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
                 x["issue_type"] = "formatting"
             x["improved_line"] = _sanitize_placeholder_text(x.get("improved_line", ""))
             x["explanation"] = _sanitize_placeholder_text(x.get("explanation", ""))
+        merged_issues = _finalize_line_issues(merged_issues)
         out["line_issues"] = merged_issues
-        vis_count = len(merged_issues)
-        gram["issue_count"] = vis_count
-        gram["score"] = _grammar_score_from_count(vis_count)
+        grammar_error_count = _grammar_error_count(merged_issues)
+        gram["issue_count"] = grammar_error_count
+        gram["total_issue_count"] = len(merged_issues)
+        gram["score"] = _grammar_score_from_count(grammar_error_count)
 
         prog_spec = _filter_program_specificity(prog_spec, prog_name, uni_name, program_fit)
 
@@ -1501,6 +1951,9 @@ def evaluate_and_rewrite(text, corrected, doc_type, format_report, grammar_repor
         out["action_plan_next_revision"] = normalized_ap
 
         # Derive quality label if missing
+        if domain_alignment.get("is_mismatch"):
+            current_score = int(out.get("overall_score", 0) or 0)
+            out["overall_score"] = min(current_score if current_score else 72, 72)
         score = out.get("overall_score", 0)
         out["overall_quality_label"] = out.get("overall_quality_label") or (
             "Exceptional" if score >= 85 else
@@ -1521,17 +1974,27 @@ async def analyze_document(
     university: str        = Form(...),
     program:    str        = Form(...),
 ):
-    suffix = os.path.splitext(file.filename)[1]
+    university = (university or "").strip()
+    program = (program or "").strip()
+    if not university:
+        return JSONResponse({"error": "Please enter a university name."}, status_code=400)
+    if not program:
+        return JSONResponse({"error": "Please enter a program name."}, status_code=400)
+    if not file or not file.filename:
+        return JSONResponse({"error": "Please upload a document."}, status_code=400)
+
+    suffix = os.path.splitext(file.filename)[1].lower()
+    if suffix not in {".pdf", ".docx", ".txt"}:
+        return JSONResponse({"error": "Unsupported file type. Please upload a PDF, DOCX, or TXT file."}, status_code=400)
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
     try:
-        text           = read_document(tmp_path)
-        grammar        = grammar_check(text)
-        classification = classify(text)
-        doc_type       = classification.get("doc_type", "SOP")
-        fmt            = format_check(text, doc_type)
+        text = read_document(tmp_path)
+        if not text.strip():
+            raise ValueError("The uploaded document appears to be empty.")
 
         unis       = _state["unis"]
         progs      = _state["progs"]
@@ -1539,31 +2002,54 @@ async def analyze_document(
         prog_index = _state["prog_index"]
         embedder   = _state["embedder"]
 
-        q      = f"{university} {program}".strip()
-        u_rows = retrieve(unis,  uni_index,  q, embedder, k=3)
-        p_rows = retrieve(progs, prog_index, q, embedder, k=3)
-        context = "\n".join(list(u_rows["combined"]) + list(p_rows["combined"]))
+        q = f"{university} {program}".strip()
+        grammar_task = asyncio.to_thread(grammar_check, text)
+        classification_task = asyncio.to_thread(classify, text)
+        context_task = asyncio.to_thread(
+            retrieve_context, unis, progs, uni_index, prog_index, q, embedder, 3
+        )
+        grammar, classification, context = await asyncio.gather(
+            grammar_task, classification_task, context_task
+        )
+        doc_type = classification.get("doc_type", "SOP")
+        fmt = format_check(text, doc_type)
 
-        prog_fit = program_fit_score(text, context)
-        ats      = ats_score(text, context, fmt) if doc_type == "RESUME" else None
+        prog_fit_task = asyncio.to_thread(program_fit_score, text, context)
+        domain_task = asyncio.to_thread(domain_alignment_check, text, program, context)
+        tone_task = asyncio.to_thread(detect_tone, text)
+        if doc_type == "RESUME":
+            ats_task = asyncio.to_thread(ats_score, text, context, fmt)
+            prog_fit, domain_alignment, tone_report, ats = await asyncio.gather(
+                prog_fit_task, domain_task, tone_task, ats_task
+            )
+        else:
+            prog_fit, domain_alignment, tone_report = await asyncio.gather(
+                prog_fit_task, domain_task, tone_task
+            )
+            ats = None
 
         evaluation = evaluate_and_rewrite(
             text=text, corrected=grammar["corrected"], doc_type=doc_type,
             format_report=fmt, grammar_report=grammar, context=context,
             program_fit=prog_fit, uni_name=university, prog_name=program,
-            ats_report=ats
+            ats_report=ats, domain_alignment=domain_alignment
         )
 
-        n_vis = len(evaluation.get("line_issues", [])) if isinstance(evaluation, dict) else 0
+        merged_line_issues = evaluation.get("line_issues", []) if isinstance(evaluation, dict) else []
+        n_grammar = _grammar_error_count(merged_line_issues)
         grammar_out = dict(grammar)
-        grammar_out["count"] = n_vis
-        grammar_out["grammar_quality_score"] = _grammar_score_from_count(n_vis)
+        grammar_out["count"] = n_grammar
+        grammar_out["grammar_error_count"] = n_grammar
+        grammar_out["total_issue_count"] = len(merged_line_issues)
+        grammar_out["grammar_quality_score"] = _grammar_score_from_count(n_grammar)
 
         return JSONResponse({
             "classification": classification,
             "grammar":        grammar_out,
             "format":         fmt,
             "program_fit":    prog_fit,
+            "domain_alignment": domain_alignment,
+            "tone_detection": tone_report,
             "ats_score":      ats,
             "evaluation":     evaluation
         })
