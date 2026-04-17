@@ -199,3 +199,37 @@
   color: #7a9494;
   flex-shrink: 0;
 }
+
+/* ── Header row with clear button ───────────── */
+.ai-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.ai-header-row .ai-title {
+  margin-bottom: 0;
+}
+
+.ai-clear-btn {
+  position: absolute;
+  right: 0;
+  background: transparent;
+  border: 1.5px solid var(--teal-400, #2aabab);
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal-700, #0f6060);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.ai-clear-btn:hover {
+  background: var(--teal-600, #128080);
+  color: #fff;
+  border-color: var(--teal-600, #128080);
+}
