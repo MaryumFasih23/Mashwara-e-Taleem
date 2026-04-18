@@ -1,25 +1,49 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./DocumentAnalyzer.css";
 import { analyzeDocument } from "../../api/documentapi";
+
+const DA_STORAGE_KEY = "mashwara_doc_analyzer_state";
+
+function saveToStorage(state) {
+  try {
+    localStorage.setItem(DA_STORAGE_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(DA_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return null;
+}
 
 export default function DocumentAnalyzer() {
   const allowedExtensions = [".pdf", ".docx", ".txt"];
   const maxFileSizeBytes = 10 * 1024 * 1024;
-  const [activeTab, setActiveTab]       = useState("ps");
-  const [university, setUniversity]     = useState("");
-  const [program, setProgram]           = useState("");
-  const [file, setFile]                 = useState(null);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState("");
-  const [result, setResult]             = useState(null);
-  const [expanded, setExpanded]         = useState({
+
+  const saved = loadFromStorage();
+
+  const [activeTab, setActiveTab]   = useState(saved?.activeTab ?? "ps");
+  const [university, setUniversity] = useState(saved?.university ?? "");
+  const [program, setProgram]       = useState(saved?.program ?? "");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+  const [result, setResult]         = useState(saved?.result ?? null);
+  const [expanded, setExpanded]     = useState({
     lineIssues: true,
     sectionInsights: true,
     toneDetection: true,
     programAlignment: true,
     resumeBullets: true,
   });
-  const fileInputRef                    = useRef(null);
+  const [file, setFile] = useState(null);
+  const fileInputRef    = useRef(null);
+
+  // Persist result + inputs to localStorage whenever they change
+  useEffect(() => {
+    saveToStorage({ activeTab, university, program, result });
+  }, [activeTab, university, program, result]);
 
   const validateFile = (selected) => {
     if (!selected) return "Please select a file to upload.";
@@ -153,7 +177,6 @@ export default function DocumentAnalyzer() {
   const toneReport = result?.tone_detection ?? {};
 
   const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value || 0)));
-  /** Aligned with backend: grammar score tracks visible line-issue count */
   const displayedGrammarScore = clampScore(grammarScore ?? 0);
   const qualityProxy = clampScore(score);
   const atsProxy = typeof atsScore === "number" ? clampScore(atsScore) : qualityProxy;
@@ -354,6 +377,21 @@ export default function DocumentAnalyzer() {
           >
             {loading ? "Analyzing…" : "Analyze Document"}
           </button>
+
+          {result && (
+            <button
+              className="da-browse"
+              style={{ marginTop: "10px", width: "100%" }}
+              onClick={() => {
+                setResult(null);
+                setFile(null);
+                setError("");
+                saveToStorage({ activeTab, university, program, result: null });
+              }}
+            >
+              Clear Results
+            </button>
+          )}
         </div>
 
         {/* RIGHT SIDE — RESULTS */}

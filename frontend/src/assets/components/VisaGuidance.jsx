@@ -139,6 +139,34 @@ const VISA_DATA = {
     fee: "~€75",
     link: "https://www.make-it-in-germany.com/en/visa-residence/types/studying",
   },
+  QA: {
+    country: "Qatar",
+    flag: "https://flagcdn.com/w40/qa.png",
+    visaType: "Student Residence Permit",
+    description:
+      "International students studying in Qatar require a Student Residence Permit sponsored by their institution. Qatar hosts world-class universities in Education City including branches of Carnegie Mellon, Georgetown, and others. The sponsoring university handles most of the visa process on the student's behalf.",
+    steps: [
+      "Receive your official acceptance letter from a Qatar-based institution.",
+      "Your institution (sponsor) submits a residence permit application on your behalf to the Ministry of Interior.",
+      "Undergo a mandatory medical fitness examination at an approved health centre in Qatar.",
+      "Submit biometric data (fingerprints and photo) at a Ministry of Interior service centre.",
+      "Collect your Qatar ID (residence permit card) once approved.",
+      "Renew annually through your sponsoring institution for the duration of your studies.",
+    ],
+    requirements: [
+      "Valid passport (6+ months validity)",
+      "Official acceptance letter from a Qatar-accredited institution",
+      "Completed residence permit application (submitted by sponsor)",
+      "Medical fitness certificate from an approved Qatar health centre",
+      "Biometric data (fingerprints and photograph)",
+      "Passport-size photographs (white background)",
+      "Proof of financial means or scholarship letter",
+      "No-objection certificate (if transferring from another sponsor)",
+    ],
+    processingTime: "2–4 weeks after medical clearance",
+    fee: "~QAR 200–500 (varies by institution and permit duration)",
+    link: "https://portal.moi.gov.qa/wps/portal/MOIInternet/services/inquiries/residencepermitinquiry",
+  },
 };
 
 const COUNTRIES = Object.entries(VISA_DATA).map(([code, data]) => ({
