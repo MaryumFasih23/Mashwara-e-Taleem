@@ -65,7 +65,6 @@ function toCountryCode(country) {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Handle common variants where country names include extra qualifiers.
   if (key.includes("united kingdom") || key === "uk" || key.includes("great britain") || key.includes("britain")) {
     return "GB";
   }
@@ -121,7 +120,6 @@ export default function Universities() {
   const [programError, setProgramError] = useState("");
   const [programWarnings, setProgramWarnings] = useState([]);
 
-  // Use cached universities from context instead of fetching on mount
   useEffect(() => {
     if (!user?.uid) {
       setResults([]);
@@ -254,19 +252,15 @@ export default function Universities() {
     setProgramWarnings([]);
     setPrograms([]);
 
-    // Create cache key from university and country
     const cacheKey = `${uni.university}---${uni.country}`;
 
-    // Check if programs are already cached
     const cachedData = getCachedPrograms(cacheKey);
     if (cachedData) {
-      // Instant load from cache
       setPrograms(cachedData.results || []);
       setProgramWarnings(cachedData.warnings || []);
       return;
     }
 
-    // Not cached, so fetch from API
     setProgramLoading(true);
 
     try {
@@ -279,7 +273,6 @@ export default function Universities() {
       setPrograms(data.results || []);
       setProgramWarnings(data.warnings || []);
 
-      // Cache the programs for future use
       setProgramsCache(cacheKey, data);
     } catch (err) {
       const apiMessage = err?.response?.data?.error;
@@ -373,15 +366,6 @@ export default function Universities() {
                     </p>
                     <p>
                       Tuition/Year: <span className="red">{formatCurrency(Number(program.tuition_fee_usd))}</span>
-                    </p>
-                    <p>
-                      Min GPA: <span className="red">{Number(program.min_gpa || 0).toFixed(2)}</span>
-                    </p>
-                    <p>
-                      Min IELTS: <span className="red">{Number(program.min_ielts_overall || 0).toFixed(1)}</span>
-                    </p>
-                    <p>
-                      Min TOEFL: <span className="red">{Math.round(Number(program.toefl_score || 0))}</span>
                     </p>
                     <p>
                       Eligibility: <span className="green">{formatPercent(Number(program.eligibility_probability || 0))}</span>
@@ -489,24 +473,6 @@ export default function Universities() {
                     <p>
                       Tuition/Year: <span className="red">{formatCurrency(Number(uni.tuition_usd))}</span>
                     </p>
-                    <p>
-                      Min GPA: <span className="red">{Number(uni.min_gpa || 0).toFixed(2)}</span>
-                    </p>
-                    {Number(uni.min_sat || 0) > 0 && (
-                      <p>
-                        Min SAT: <span className="red">{Math.round(Number(uni.min_sat || 0))}</span>
-                      </p>
-                    )}
-                    {Number(uni.min_toefl || 0) > 0 && (
-                      <p>
-                        Min TOEFL: <span className="red">{Math.round(Number(uni.min_toefl || 0))}</span>
-                      </p>
-                    )}
-                    {Number(uni.min_ielts || 0) > 0 && (
-                      <p>
-                        Min IELTS: <span className="red">{Number(uni.min_ielts || 0).toFixed(1)}</span>
-                      </p>
-                    )}
                     <p className="uni-card-hint">Click this card to view eligible programs.</p>
                   </div>
 
