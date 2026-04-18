@@ -4,6 +4,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import faiss
+import httpx
+import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,6 +24,9 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 EMBED_MODEL  = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
 TOP_K        = int(os.getenv("TOP_K", "8"))
+
+# URL of your Node backend's scholarship endpoint
+SCHOLARSHIP_API_URL = os.getenv("SCHOLARSHIP_API_URL", "http://localhost:5000/api/scholarships")
 
 # ─────────────────────────────────────────────
 # PATHS
@@ -277,16 +282,126 @@ def retrieve(query, model, index, chunk_list):
 
 
 # ══════════════════════════════════════════════════════════════════
-# 4. PROFILE CONTEXT BUILDER  (silent — never echoed back to student)
+# 4. SCHOLARSHIP INTEGRATION
+# ══════════════════════════════════════════════════════════════════
+
+# Keywords that signal the student is asking about scholarships
+SCHOLARSHIP_KEYWORDS = [
+    "scholarship", "scholarships", "funded", "fully funded", "funding",
+    "financial aid", "stipend", "bursary", "fellowship", "grant",
+    "tuition waiver", "free education", "scholarship for pakistani",
+    "scholarship for international", "need money", "can't afford",
+    "how to fund", "fund my studies",
+]
+
+# Country keywords we can extract to narrow the scholarship query
+COUNTRY_MAP = {
+    "usa": "USA", "us": "USA", "united states": "USA", "america": "USA",
+    "uk": "UK", "britain": "UK", "england": "UK", "united kingdom": "UK",
+    "canada": "Canada", "australia": "Australia",
+    "germany": "Germany", "qatar": "Qatar",
+}
+
+DEGREE_MAP = {
+    "bachelor": "Bachelor", "bachelors": "Bachelor", "undergraduate": "Bachelor", "ug": "Bachelor",
+    "master": "Master", "masters": "Master", "ms ": "Master", "msc": "Master",
+    "postgraduate": "Master", "pg ": "Master",
+}
+
+
+def is_scholarship_question(message: str) -> bool:
+    msg_lower = message.lower()
+    return any(kw in msg_lower for kw in SCHOLARSHIP_KEYWORDS)
+
+
+def extract_country_from_message(message: str) -> str:
+    msg_lower = message.lower()
+    for keyword, country in COUNTRY_MAP.items():
+        if keyword in msg_lower:
+            return country
+    return ""
+
+
+def extract_degree_from_message(message: str) -> str:
+    msg_lower = message.lower()
+    for keyword, degree in DEGREE_MAP.items():
+        if keyword in msg_lower:
+            return degree
+    return ""
+
+
+def fetch_scholarships_for_chatbot(country: str = "", degree_level: str = "", domain: str = "Computer Science") -> str:
+    """
+    Calls the Node backend scholarship endpoint and returns a formatted
+    string block to inject into the LLM prompt.
+    Returns empty string on any failure (chatbot still works without it).
+    """
+    try:
+        params = {"domain": domain}
+        if country:
+            params["country"] = country
+        if degree_level:
+            params["degreeLevel"] = degree_level
+
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(SCHOLARSHIP_API_URL, params=params)
+
+        if response.status_code != 200:
+            print(f"⚠️  Scholarship API returned {response.status_code}")
+            return ""
+
+        data = response.json()
+        scholarships = data.get("scholarships", [])
+
+        if not scholarships:
+            return ""
+
+        # Take top 15 scholarships by score to keep context manageable
+        top = sorted(scholarships, key=lambda s: s.get("score", 0), reverse=True)[:15]
+
+        lines = [
+            "[SCHOLARSHIP DATA — Use this when the student asks about scholarships, funding, or financial aid. "
+            "Present scholarships naturally. Do not list all of them unless asked — pick the most relevant ones.]"
+        ]
+
+        for s in top:
+            title       = s.get("title", "Unknown Scholarship")
+            provider    = s.get("provider", "")
+            s_country   = s.get("country", "")
+            degree      = s.get("degreeLevel", "")
+            amount      = s.get("amount", "")
+            deadline    = s.get("deadline", "")
+            s_type      = s.get("type", "")
+            is_govt     = s.get("isGovernment", False)
+            link        = s.get("applicationLink", "")
+            eligibility = s.get("eligibility", [])
+            description = s.get("description", "")
+
+            parts = []
+            if provider:    parts.append(f"Provider: {provider}")
+            if s_country:   parts.append(f"Country: {s_country}")
+            if degree:      parts.append(f"Level: {degree}")
+            if amount:      parts.append(f"Amount: {amount}")
+            if deadline:    parts.append(f"Deadline: {deadline}")
+            if s_type:      parts.append(f"Type: {'Government' if is_govt else s_type}")
+            if link:        parts.append(f"Link: {link}")
+            if eligibility: parts.append(f"Eligibility: {'; '.join(eligibility[:3])}")
+            if description: parts.append(f"Info: {description[:120]}")
+
+            lines.append(f"- {title} | " + " | ".join(parts))
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        print(f"⚠️  Could not fetch scholarships for chatbot: {e}")
+        return ""
+
+
+# ══════════════════════════════════════════════════════════════════
+# 5. PROFILE CONTEXT BUILDER  (silent — never echoed back to student)
 # ══════════════════════════════════════════════════════════════════
 
 def build_profile_context(profile: dict) -> str:
-    """
-    Converts the student's MongoDB profile into a compact context block
-    that is injected into the LLM prompt silently.
-    The LLM is instructed to use this data only when the student's question
-    directly requires it — never to repeat names/scores unprompted.
-    """
     if not profile:
         return ""
 
@@ -363,7 +478,7 @@ def build_profile_context(profile: dict) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════
-# 5. SYSTEM PROMPT  (unchanged from your original)
+# 6. SYSTEM PROMPT
 # ══════════════════════════════════════════════════════════════════
 
 SYSTEM_PROMPT = """You are an expert university admissions consultant for Pakistani and international students.
@@ -396,6 +511,14 @@ STRICT DON'TS:
 - Never mention the student's name, GPA, or test scores back to them unless they specifically ask about their own profile.
 - Never say things like "with your X GPA" or "given your IELTS of Y" unless the student explicitly asked you to assess their profile.
 - Never reveal that you have a student profile or eligibility list. Use the information silently.
+
+SCHOLARSHIP ANSWERING RULES:
+- When scholarship data is provided, use it to give specific, helpful answers.
+- Mention 2-4 scholarships by name when asked, with the most important detail (amount, deadline, or eligibility).
+- Always include the application link if one is available.
+- Do not list every scholarship — pick the best matches for the student's situation.
+- If the student's profile shows they are interested in scholarships or need financial aid, prioritize fully funded and government scholarships.
+- Never make up scholarships that are not in the provided data.
 
 HOW TO ANSWER BY QUESTION TYPE:
 
@@ -455,17 +578,21 @@ Example 4:
 Student: "Any other university?"
 Answer: "Yes, you could also look at a few other similar options, depending on the country and program level. The best alternatives would be universities with slightly more flexible entry requirements."
 
+Example 5:
+Student: "Are there any scholarships for Pakistani students in the UK?"
+Answer: "Yes, there are several options worth looking at. The Chevening Scholarship is one of the most well-known government-funded options for Pakistani students. The Commonwealth Scholarship is another strong choice if you're aiming for postgraduate study. Both are fully funded and have competitive but fair selection processes."
+
 FINAL RULE:
 Always give the shortest natural answer that still feels helpful."""
 
 
 # ══════════════════════════════════════════════════════════════════
-# 6. GROQ LLM CALL
+# 7. GROQ LLM CALL
 # ══════════════════════════════════════════════════════════════════
 
 def ask_groq(client, user_message, retrieved_chunks, conversation_history,
-             profile_context="", eligibility_summary=""):
-    if not retrieved_chunks:
+             profile_context="", eligibility_summary="", scholarship_context=""):
+    if not retrieved_chunks and not scholarship_context:
         return "I'm sorry, I don't have enough information on that."
 
     context_str = "\n".join(r["chunk"]["text"] for r in retrieved_chunks)
@@ -476,6 +603,8 @@ def ask_groq(client, user_message, retrieved_chunks, conversation_history,
         extra += f"\n\n{profile_context}"
     if eligibility_summary:
         extra += f"\n\n{eligibility_summary}"
+    if scholarship_context:
+        extra += f"\n\n{scholarship_context}"
 
     rag_message = f"""Use the information below to answer the student's question naturally and briefly.{extra}
 
@@ -495,14 +624,14 @@ Give a short, natural, consultant-style response."""
         model=GROQ_MODEL,
         messages=messages,
         temperature=0.2,
-        max_tokens=220,
+        max_tokens=320,
     )
 
     return response.choices[0].message.content.strip()
 
 
 # ══════════════════════════════════════════════════════════════════
-# 7. STARTUP & ROUTES
+# 8. STARTUP & ROUTES
 # ══════════════════════════════════════════════════════════════════
 
 @app.on_event("startup")
@@ -544,6 +673,41 @@ def health():
 def chat(req: ChatRequest):
     results = retrieve(req.message, embed_model, faiss_index, chunks)
     profile_context = build_profile_context(req.profile) if req.profile else ""
+
+    # ── Scholarship integration ──────────────────────────────────
+    scholarship_context = ""
+    if is_scholarship_question(req.message):
+        country      = extract_country_from_message(req.message)
+        degree_level = extract_degree_from_message(req.message)
+
+        # Also pull country/degree from profile if not found in message
+        if not country and req.profile:
+            pref = req.profile.get("preferredCountries", [])
+            if isinstance(pref, list) and pref:
+                country = pref[0]
+            elif isinstance(pref, str):
+                country = pref
+        if not degree_level and req.profile:
+            lvl = req.profile.get("preferredStudyLevel", "")
+            if "master" in lvl.lower():
+                degree_level = "Master"
+            elif "bachelor" in lvl.lower():
+                degree_level = "Bachelor"
+
+        # Use student's field of study as domain if available
+        domain = "Computer Science"
+        if req.profile:
+            field = req.profile.get("fieldOfStudy", "")
+            if field:
+                domain = field
+
+        scholarship_context = fetch_scholarships_for_chatbot(country, degree_level, domain)
+        if scholarship_context:
+            print(f"✅ Scholarship context injected for: country={country!r}, degree={degree_level!r}, domain={domain!r}")
+        else:
+            print("⚠️  Scholarship fetch returned empty — answering without scholarship data")
+    # ─────────────────────────────────────────────────────────────
+
     reply = ask_groq(
         groq_client,
         req.message,
@@ -551,5 +715,6 @@ def chat(req: ChatRequest):
         req.history,
         profile_context=profile_context,
         eligibility_summary=req.eligibility_summary or "",
+        scholarship_context=scholarship_context,
     )
     return ChatResponse(reply=reply)
