@@ -10,6 +10,7 @@
   padding-bottom: 22px;
 }
 
+/* ── HERO ── */
 .dh2-hero {
   border-radius: 22px;
   padding: 22px;
@@ -24,9 +25,7 @@
   box-shadow: 0 16px 36px rgba(23, 50, 59, 0.08);
 }
 
-.dh2-hero-copy {
-  animation: dh2-rise 640ms ease both;
-}
+.dh2-hero-copy { animation: dh2-rise 640ms ease both; }
 
 .dh2-kicker {
   margin: 0;
@@ -43,18 +42,9 @@
   line-height: 1.06;
 }
 
-.dh2-hero-copy p {
-  margin: 0;
-  color: #3f5b65;
-  line-height: 1.7;
-}
+.dh2-hero-copy p { margin: 0; color: #3f5b65; line-height: 1.7; }
 
-.dh2-cta-row {
-  margin-top: 16px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.dh2-cta-row { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
 
 .dh2-btn {
   text-decoration: none;
@@ -64,49 +54,37 @@
   transition: transform 160ms ease;
 }
 
-.dh2-btn:hover {
-  transform: translateY(-2px);
-}
-
-.dh2-btn-primary {
-  background: var(--dh2-teal);
-  color: #fff;
-}
-
+.dh2-btn:hover { transform: translateY(-2px); }
+.dh2-btn-primary { background: var(--dh2-teal); color: #fff; }
 .dh2-btn-secondary {
   background: rgba(42,127,120,0.08);
   color: var(--dh2-ink);
   border: 1px solid rgba(23, 50, 59, 0.16);
 }
 
+/* ── STAT CARDS ── */
 .dh2-stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  align-content: center;
 }
 
 .dh2-stat-card {
   border-radius: 16px;
   padding: 14px;
+  text-align: center;
   border: 1px solid rgba(23, 50, 59, 0.1);
   background: linear-gradient(135deg, rgba(42, 127, 120, 0.1), rgba(20, 120, 110, 0.12));
   animation: dh2-rise 680ms ease both;
 }
 
-.dh2-stat-card strong {
-  font-size: 25px;
-  line-height: 1;
-}
+.dh2-stat-card strong { display: block; font-size: 26px; line-height: 1; }
+.dh2-stat-card span  { display: block; margin-top: 6px; color: #3f5b65; font-size: 13px; }
 
-.dh2-stat-card span {
-  display: block;
-  margin-top: 7px;
-  color: #3f5b65;
-  font-size: 14px;
-}
-
+/* ── STEPS ── */
 .dh2-steps,
-.dh2-live {
+.dh2-charts {
   margin-top: 18px;
   border-radius: 20px;
   padding: 20px;
@@ -116,15 +94,9 @@
 }
 
 .dh2-steps h2,
-.dh2-live-head h2 {
-  margin: 0 0 6px;
-  font-size: clamp(22px, 2.8vw, 30px);
-}
+.dh2-charts h2 { margin: 0 0 6px; font-size: clamp(22px, 2.8vw, 30px); }
 
-.dh2-live-head p {
-  margin: 0;
-  color: #3f5b65;
-}
+.dh2-charts-sub { margin: 0 0 14px; color: #3f5b65; }
 
 .dh2-step-grid {
   margin-top: 12px;
@@ -141,17 +113,9 @@
   animation: dh2-rise 740ms ease both;
 }
 
-.dh2-step-card:nth-child(2) {
-  animation-delay: 90ms;
-}
-
-.dh2-step-card:nth-child(3) {
-  animation-delay: 160ms;
-}
-
-.dh2-step-card:nth-child(4) {
-  animation-delay: 230ms;
-}
+.dh2-step-card:nth-child(2) { animation-delay: 90ms; }
+.dh2-step-card:nth-child(3) { animation-delay: 160ms; }
+.dh2-step-card:nth-child(4) { animation-delay: 230ms; }
 
 .dh2-step-card span {
   text-transform: uppercase;
@@ -161,143 +125,110 @@
   font-weight: 700;
 }
 
-.dh2-step-card h3 {
-  margin: 8px 0;
-  font-size: 19px;
-}
+.dh2-step-card h3 { margin: 8px 0; font-size: 19px; }
+.dh2-step-card p  { margin: 0; color: #47626b; line-height: 1.6; }
 
-.dh2-step-card p {
-  margin: 0;
-  color: #47626b;
-  line-height: 1.6;
-}
-
-.dh2-progress-wrap {
-  margin-top: 14px;
-}
-
-.dh2-progress-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.dh2-progress-bar {
-  width: 100%;
-  height: 13px;
-  border-radius: 999px;
-  background: #e5e1d8;
-  overflow: hidden;
-}
-
-.dh2-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--dh2-teal), #15b89f);
-  border-radius: inherit;
-  transition: width 420ms ease;
-}
-
-.dh2-live-grid {
-  margin-top: 14px;
+/* ── CHARTS GRID ── */
+.dh2-charts-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dh2-chart-card {
+  border-radius: 16px;
+  border: 1px solid rgba(23, 50, 59, 0.1);
+  background: linear-gradient(180deg, #fff, var(--dh2-mint));
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.dh2-live-card {
-  border-radius: 14px;
-  border: 1px solid rgba(23, 50, 59, 0.1);
-  background: linear-gradient(180deg, #fff, var(--dh2-mint));
-  padding: 14px;
-}
+.dh2-chart-card h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--dh2-ink); }
 
-.dh2-live-card h3 {
-  margin: 0 0 8px;
-  font-size: 18px;
-}
+.dh2-chart-empty { color: #5f7e88; font-size: 14px; margin: 0; }
 
-.dh2-live-card p {
-  margin: 0;
-  color: #47626b;
-  line-height: 1.6;
-}
-
-.dh2-live-card ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.dh2-live-card li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  padding: 9px;
-}
-
-.dh2-live-card li span {
-  font-weight: 600;
-}
-
-.dh2-live-card li small {
-  color: #516d75;
-}
-
-.dh2-live-card a {
-  margin-top: 12px;
-  display: inline-flex;
-  text-decoration: none;
-  background: var(--dh2-teal);
-  color: #fff;
-  border-radius: 999px;
-  padding: 8px 13px;
-  font-size: 14px;
+.dh2-chart-link {
+  margin-top: auto;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--dh2-teal);
+  text-decoration: none;
 }
 
+.dh2-chart-link:hover { text-decoration: underline; }
+
+/* ── BAR CHART ── */
+.dh2-bar-chart { display: flex; flex-direction: column; gap: 9px; }
+
+.dh2-bar-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.dh2-bar-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2d4a52;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dh2-bar-track { height: 10px; border-radius: 999px; background: #ddf0ea; overflow: hidden; }
+
+.dh2-bar-fill { height: 100%; border-radius: 999px; transition: width 700ms ease; }
+
+.dh2-bar-val { font-size: 12px; font-weight: 700; color: var(--dh2-teal); text-align: right; }
+
+/* ── SPARKLINE ── */
+.dh2-spark-wrap { display: flex; flex-direction: column; gap: 6px; }
+.dh2-sparkline  { width: 100%; height: auto; overflow: visible; }
+
+.dh2-spark-labels { display: flex; justify-content: space-between; }
+.dh2-spark-labels span { font-size: 11px; color: #4a6b74; text-align: center; flex: 1; }
+
+/* ── DEADLINE BADGE ── */
+.dh2-deadline-badge {
+  background: rgba(42, 127, 120, 0.1);
+  border: 1px solid rgba(42, 127, 120, 0.25);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--dh2-ink);
+}
+
+/* ── PRIORITY CARD ── */
+.dh2-priority-body { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.dh2-priority-icon { font-size: 38px; line-height: 1; }
+.dh2-priority-body p { margin: 0; color: #47626b; line-height: 1.6; font-size: 14px; }
+
+/* ── ANIMATIONS ── */
 @keyframes dh2-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0%   { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 1040px) {
-  .dh2-step-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dh2-live-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  .dh2-step-grid   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dh2-charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 840px) {
-  .dh2-hero {
-    grid-template-columns: 1fr;
-  }
+  .dh2-hero      { grid-template-columns: 1fr; }
+  .dh2-stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
   .dh2-hero,
   .dh2-steps,
-  .dh2-live {
-    padding: 14px;
-    border-radius: 15px;
-  }
-
+  .dh2-charts    { padding: 14px; border-radius: 15px; }
   .dh2-step-grid,
-  .dh2-live-grid,
-  .dh2-stats-grid {
-    grid-template-columns: 1fr;
-  }
+  .dh2-charts-grid,
+  .dh2-stats-grid { grid-template-columns: 1fr; }
+  .dh2-bar-row   { grid-template-columns: 100px 1fr 30px; }
 }
