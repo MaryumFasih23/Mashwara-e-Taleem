@@ -9,3 +9,7 @@ language-tool-python
 sentence-transformers
 faiss-cpu
 numpy
+python-dotenv
+httpx
+scikit-learn
+torch

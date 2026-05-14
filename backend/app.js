@@ -39,7 +39,7 @@ app.use("/api/scholarships", scholarshipRoutes);
 app.use(
   "/api/document-analyzer",
   createProxyMiddleware({
-    target: "http://localhost:8001",
+    target: process.env.DOCUMENT_ANALYZER_API_URL,
     changeOrigin: true,
   })
 );
@@ -48,7 +48,7 @@ app.use(
 app.use(
   "/api/chatbot",
   createProxyMiddleware({
-    target: "http://localhost:8002",
+    target: process.env.CHATBOT_API_URL,
     changeOrigin: true,
     pathRewrite: { "^/api/chatbot": "" },
   })
