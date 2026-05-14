@@ -11,7 +11,8 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
 
-if (process.env.NODE_ENV !== "test") {
+// IMPORTANT FOR VERCEL
+if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
