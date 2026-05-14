@@ -9,7 +9,19 @@ const require = createRequire(import.meta.url);
 const scholarshipRoutes = require("./scholarships/routes/scholarships.js");
 
 const app = express();
-app.use(cors());
+
+// FIXED CORS
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://mashwara-e-taleem-iiq3.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -31,26 +43,32 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+// ROUTES
 app.use("/api/users", userRoutes);
 app.use("/api/universities", universityRoutes);
 app.use("/api/scholarships", scholarshipRoutes);
 
-// Proxy document-analyzer calls to Python FastAPI (port 8001)
+// DOCUMENT ANALYZER PROXY
 app.use(
   "/api/document-analyzer",
   createProxyMiddleware({
     target: process.env.DOCUMENT_ANALYZER_API_URL,
     changeOrigin: true,
+    pathRewrite: {
+      "^/api/document-analyzer": "",
+    },
   })
 );
 
-// Proxy chatbot calls to Python FastAPI chatbot (port 8002)
+// CHATBOT PROXY
 app.use(
   "/api/chatbot",
   createProxyMiddleware({
     target: process.env.CHATBOT_API_URL,
     changeOrigin: true,
-    pathRewrite: { "^/api/chatbot": "" },
+    pathRewrite: {
+      "^/api/chatbot": "",
+    },
   })
 );
 
