@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/universities";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/universities`;
 
 export const getUniversityRecommendations = async (uid, options = {}) => {
   const minProb = options.minProb ?? 0.1;
@@ -13,7 +13,10 @@ export const getUniversityRecommendations = async (uid, options = {}) => {
   return res.data;
 };
 
-export const getUniversityProgramEligibility = async (uid, options = {}) => {
+export const getUniversityProgramEligibility = async (
+  uid,
+  options = {}
+) => {
   const university = options.university ?? "";
   const country = options.country ?? "";
   const topK = options.topK ?? 50;
